@@ -1,0 +1,205 @@
+# Resumaker - Git Ignore
+
+# ==========================================
+# SENSITIVE FILES - NEVER COMMIT!
+# ==========================================
+.env
+.env.local
+.env.*.local
+CREDENTIALS.md
+START_BUILD.md
+READY_TO_BUILD.md
+*.key
+*.pem
+*.p12
+
+# ==========================================
+# DEPENDENCIES
+# ==========================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ==========================================
+# NEXT.JS / REACT
+# ==========================================
+.next/
+out/
+build/
+dist/
+.vercel
+.turbo
+
+# ==========================================
+# PYTHON / FASTAPI
+# ==========================================
+*.pyc
+.python-version
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# ==========================================
+# DATABASES
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# ==========================================
+# IDEs & EDITORS
+# ==========================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime
+*.sublime-project
+*.sublime-workspace
+
+# ==========================================
+# OS FILES
+# ==========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ==========================================
+# LOGS
+# ==========================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# ==========================================
+# TESTING
+# ==========================================
+coverage/
+.nyc_output/
+*.lcov
+
+# ==========================================
+# TEMPORARY FILES
+# ==========================================
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# ==========================================
+# PROJECT SPECIFIC
+# ==========================================
+
+# Uploaded files (dev)
+uploads/
+public/uploads/
+
+# Generated resumes (dev)
+generated/
+exports/
+
+# Audio recordings (dev)
+audio/
+recordings/
+
+# OCR temp files
+ocr_temp/
+
+# Cached data
+.cache/
+cache/
+
+# ==========================================
+# DEPLOYMENT
+# ==========================================
+
+# Vercel
+.vercel
+
+# Railway
+.railway/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# ==========================================
+# DOCUMENTATION (keep planning docs)
+# ==========================================
+# We WANT to keep these:
+# - README.md
+# - CONTEXT.md
+# - CHANGELOG.md
+# - PROJECT_VISION_V2.md
+# - BUILD_PLAN_V2.md
+# - EXECUTIVE_SUMMARY.md
+# - MVP_SCOPE_FINAL.md
+# - NEW_FEATURE_REFERENCE_PREVIEW.md
+# - PRE_BUILD_REVIEW.md
+
+# ==========================================
+# KEEP EXAMPLES
+# ==========================================
+!.env.example
