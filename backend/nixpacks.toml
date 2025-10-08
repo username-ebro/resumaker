@@ -13,6 +13,8 @@ aptPkgs = [
     'libffi-dev',
     'libcairo2',
     'libcairo2-dev',
+    'libgobject-2.0-0',
+    'libglib2.0-0',
     'shared-mime-info'
 ]
 
