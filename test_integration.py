@@ -85,7 +85,9 @@ def test_resume_list():
     print_section("TEST 4: Resume List Endpoint")
 
     try:
-        response = requests.get(f"{BACKEND_URL}/resumes/list?user_id=test-user-id", timeout=5)
+        # Use a valid UUID format for testing (this user won't exist, but should return empty list)
+        test_uuid = "00000000-0000-0000-0000-000000000000"
+        response = requests.get(f"{BACKEND_URL}/resumes/list?user_id={test_uuid}", timeout=5)
         data = response.json()
 
         print(f"✅ Status Code: {response.status_code}")

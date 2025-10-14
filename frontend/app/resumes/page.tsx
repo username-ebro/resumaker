@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
 import { API_URL } from '@/lib/config'
 
 interface Resume {
@@ -13,44 +14,61 @@ interface Resume {
   job_title?: string
   company?: string
   ats_score: number
+  is_starred?: boolean
+  is_archived?: boolean
 }
 
 export default function ResumesPage() {
+  const [user, setUser] = useState<any>(null)
   const [resumes, setResumes] = useState<Resume[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const router = useRouter()
 
-
   useEffect(() => {
-    fetchResumes()
+    checkUserAndFetchResumes()
   }, [])
 
-  const fetchResumes = async () => {
-    try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'test-user-id'
+  const checkUserAndFetchResumes = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
 
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+
+    setUser(user)
+    fetchResumes(user.id)
+  }
+
+  const fetchResumes = async (userId: string) => {
+    try {
       const res = await fetch(`${API_URL}/resumes/list?user_id=${userId}`)
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch resumes')
+      }
+
       const data = await res.json()
-      setResumes(data.resumes)
+      setResumes(data.resumes || [])
     } catch (error) {
       console.error('Failed to fetch resumes:', error)
+      setResumes([]) // Ensure resumes is always an array
     } finally {
       setLoading(false)
     }
   }
 
   const generateNewResume = async () => {
+    if (!user) return
+
     setGenerating(true)
     try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'test-user-id'
-
-      const res = await fetch(`${API_URL}/resumes/generate`, {
+      const res = await fetch(`${API_URL}/resumes/generate?user_id=${user.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId })
+        body: JSON.stringify({})
       })
 
       const data = await res.json()
@@ -58,6 +76,8 @@ export default function ResumesPage() {
       if (data.success) {
         // Navigate to the new resume
         router.push(`/resumes/${data.resume_version_id}`)
+      } else {
+        alert('Failed to generate resume: ' + (data.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Failed to generate resume:', error)
@@ -93,146 +113,272 @@ export default function ResumesPage() {
     return 'text-red-600'
   }
 
+  const toggleStar = async (resumeId: string, currentStarred: boolean) => {
+    try {
+      // Optimistic update
+      setResumes(prev => prev.map(r =>
+        r.id === resumeId ? { ...r, is_starred: !currentStarred } : r
+      ))
+
+      const res = await fetch(`${API_URL}/resumes/${resumeId}/star`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_starred: !currentStarred })
+      })
+
+      if (!res.ok) {
+        // Revert on error
+        setResumes(prev => prev.map(r =>
+          r.id === resumeId ? { ...r, is_starred: currentStarred } : r
+        ))
+        throw new Error('Failed to update star')
+      }
+    } catch (error) {
+      console.error('Failed to toggle star:', error)
+    }
+  }
+
+  const deleteResume = async (resumeId: string) => {
+    if (!confirm('Delete this resume permanently?')) return
+
+    try {
+      const res = await fetch(`${API_URL}/resumes/${resumeId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        setResumes(prev => prev.filter(r => r.id !== resumeId))
+      } else {
+        throw new Error('Failed to delete')
+      }
+    } catch (error) {
+      console.error('Failed to delete resume:', error)
+      alert('Failed to delete resume')
+    }
+  }
+
+  const archiveResume = async (resumeId: string, currentArchived: boolean) => {
+    try {
+      // Optimistic update
+      setResumes(prev => prev.map(r =>
+        r.id === resumeId ? { ...r, is_archived: !currentArchived } : r
+      ))
+
+      const res = await fetch(`${API_URL}/resumes/${resumeId}/archive`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_archived: !currentArchived })
+      })
+
+      if (!res.ok) {
+        // Revert on error
+        setResumes(prev => prev.map(r =>
+          r.id === resumeId ? { ...r, is_archived: currentArchived } : r
+        ))
+        throw new Error('Failed to archive')
+      }
+    } catch (error) {
+      console.error('Failed to toggle archive:', error)
+    }
+  }
+
+  // Filter resumes based on archived status
+  const filteredResumes = showArchived
+    ? resumes.filter(r => r.is_archived)
+    : resumes.filter(r => !r.is_archived)
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading resumes...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="brutal-box brutal-shadow p-12 text-center">
+          <div className="cool-spinner h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-sm font-bold uppercase">Loading resumes...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Resumes</h1>
-              <p className="text-gray-600 mt-2">
-                Generate, edit, and manage your ATS-optimized resumes
-              </p>
-            </div>
+    <div className="min-h-screen">
+      {/* Nav */}
+      <nav className="brutal-box border-b-2 border-black">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
             <button
-              onClick={generateNewResume}
-              disabled={generating}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400"
+              onClick={() => router.push('/dashboard')}
+              className="brutal-btn brutal-shadow"
             >
-              {generating ? 'Generating...' : '+ New Resume'}
+              ← Back
             </button>
+            <h1 className="text-2xl">MY RESUMES</h1>
           </div>
+          <button
+            onClick={generateNewResume}
+            disabled={generating}
+            className="brutal-btn brutal-btn-primary brutal-shadow disabled:opacity-50"
+          >
+            {generating ? 'Generating...' : '+ New Resume'}
+          </button>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-6 py-12">
+        {/* Archive toggle */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setShowArchived(false)}
+            className={`brutal-btn brutal-shadow ${!showArchived ? 'brutal-btn-primary' : ''}`}
+          >
+            Active ({resumes.filter(r => !r.is_archived).length})
+          </button>
+          <button
+            onClick={() => setShowArchived(true)}
+            className={`brutal-btn brutal-shadow ${showArchived ? 'brutal-btn-primary' : ''}`}
+          >
+            Archived ({resumes.filter(r => r.is_archived).length})
+          </button>
         </div>
 
-        {/* Resumes List */}
-        {resumes.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="mb-4">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No resumes yet</h3>
-            <p className="text-gray-600 mb-6">
-              Generate your first ATS-optimized resume from your knowledge base
+        {/* Empty state */}
+        {filteredResumes.length === 0 ? (
+          <div className="brutal-box brutal-shadow p-12 text-center">
+            <h3 className="text-2xl mb-4">
+              {showArchived ? 'NO ARCHIVED RESUMES' : 'NO RESUMES YET'}
+            </h3>
+            <p className="text-sm mb-6">
+              {showArchived
+                ? 'Archived resumes will appear here'
+                : 'Generate your first ATS-optimized resume from your knowledge base'}
             </p>
-            <button
-              onClick={generateNewResume}
-              disabled={generating}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-            >
-              {generating ? 'Generating...' : 'Generate First Resume'}
-            </button>
+            {!showArchived && (
+              <button
+                onClick={generateNewResume}
+                disabled={generating}
+                className="brutal-btn brutal-btn-primary brutal-shadow"
+              >
+                {generating ? 'Generating...' : 'Generate First Resume'}
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid gap-4">
-            {resumes.map((resume) => (
-              <Link
-                key={resume.id}
-                href={`/resumes/${resume.id}`}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 block"
-              >
-                <div className="flex justify-between items-start">
+            {filteredResumes.map((resume) => (
+              <div key={resume.id} className="brutal-box brutal-shadow p-6">
+                <div className="flex justify-between items-start gap-4">
+                  {/* Left: Title and metadata */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {resume.job_title || `Resume Version ${resume.version}`}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(resume.status)}`}>
+                      {/* Star button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          toggleStar(resume.id, resume.is_starred || false)
+                        }}
+                        className="text-2xl hover:scale-110 transition-transform"
+                      >
+                        {resume.is_starred ? '⭐' : '☆'}
+                      </button>
+
+                      <Link href={`/resumes/${resume.id}`}>
+                        <h3 className="text-lg font-bold hover:underline">
+                          {resume.job_title || `Resume Version ${resume.version}`}
+                        </h3>
+                      </Link>
+
+                      <span className={`px-3 py-1 text-xs font-bold ${getStatusBadge(resume.status)}`}>
                         {getStatusLabel(resume.status)}
                       </span>
                     </div>
 
                     {resume.company && (
-                      <p className="text-gray-600 mb-2">{resume.company}</p>
+                      <p className="text-sm mb-2">{resume.company}</p>
                     )}
 
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center gap-4 text-xs text-gray-600">
                       <span>Version {resume.version}</span>
                       <span>•</span>
-                      <span>Created {new Date(resume.created_at).toLocaleDateString()}</span>
+                      <span>Created {new Date(resume.created_at).toLocaleString('en-US', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}</span>
                     </div>
+
+                    {/* Truth check warning */}
+                    {resume.status === 'truth_check_pending' && (
+                      <div className="mt-3 p-2 brutal-box bg-yellow-50 text-xs">
+                        <span className="font-bold">⚠️ Truth check required</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600 mb-1">ATS Score</div>
-                    <div className={`text-3xl font-bold ${getATSScoreColor(resume.ats_score)}`}>
+                  {/* Right: ATS Score */}
+                  <div className="text-center">
+                    <div className="text-xs font-bold uppercase mb-1">ATS Score</div>
+                    <div className={`text-4xl font-bold ${getATSScoreColor(resume.ats_score)}`}>
                       {resume.ats_score}
                     </div>
                     <div className="text-xs text-gray-500">/ 100</div>
                   </div>
-                </div>
 
-                {/* Progress indicator for pending reviews */}
-                {resume.status === 'truth_check_pending' && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center text-yellow-700">
-                      <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm font-medium">Truth check required - review flagged items</span>
-                    </div>
+                  {/* Actions */}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => router.push(`/resumes/${resume.id}`)}
+                      className="brutal-btn brutal-btn-primary brutal-shadow text-xs px-3 py-2"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => archiveResume(resume.id, resume.is_archived || false)}
+                      className="brutal-btn brutal-shadow text-xs px-3 py-2"
+                    >
+                      {resume.is_archived ? 'Unarchive' : 'Archive'}
+                    </button>
+                    <button
+                      onClick={() => deleteResume(resume.id)}
+                      className="brutal-btn bg-red-50 border-2 border-red-600 hover:bg-red-100 text-xs px-3 py-2"
+                    >
+                      Delete
+                    </button>
                   </div>
-                )}
-              </Link>
+                </div>
+              </div>
             ))}
           </div>
         )}
 
         {/* Quick Stats */}
         {resumes.length > 0 && (
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-2xl font-bold text-gray-900">{resumes.length}</div>
-              <div className="text-sm text-gray-600">Total Resumes</div>
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="brutal-box-seafoam brutal-shadow-seafoam p-4">
+              <p className="text-xs font-bold uppercase mb-1">Total Resumes</p>
+              <p className="text-3xl font-bold">{resumes.length}</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-2xl font-bold text-green-600">
+            <div className="brutal-box brutal-shadow p-4">
+              <p className="text-xs font-bold uppercase mb-1">Starred</p>
+              <p className="text-3xl font-bold">
+                {resumes.filter(r => r.is_starred).length}
+              </p>
+            </div>
+            <div className="brutal-box brutal-shadow p-4">
+              <p className="text-xs font-bold uppercase mb-1">Finalized</p>
+              <p className="text-3xl font-bold text-green-600">
                 {resumes.filter(r => r.status === 'finalized').length}
-              </div>
-              <div className="text-sm text-gray-600">Finalized</div>
+              </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="brutal-box brutal-shadow p-4">
+              <p className="text-xs font-bold uppercase mb-1">Avg ATS</p>
+              <p className={`text-3xl font-bold ${getATSScoreColor(Math.round(resumes.reduce((sum, r) => sum + r.ats_score, 0) / resumes.length))}`}>
                 {Math.round(resumes.reduce((sum, r) => sum + r.ats_score, 0) / resumes.length)}
-              </div>
-              <div className="text-sm text-gray-600">Avg ATS Score</div>
+              </p>
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

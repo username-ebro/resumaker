@@ -7,6 +7,7 @@ from datetime import datetime
 import anthropic
 import os
 from ..database import get_supabase
+from ..utils.user_utils import ensure_user_profile
 
 class ResumeGenerator:
     def __init__(self):
@@ -22,7 +23,8 @@ class ResumeGenerator:
         self,
         user_id: str,
         job_description: Optional[str] = None,
-        target_role: Optional[str] = None
+        target_role: Optional[str] = None,
+        user_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate a complete resume from user's knowledge base
@@ -31,6 +33,8 @@ class ResumeGenerator:
             user_id: UUID of the user
             job_description: Optional job description to tailor resume
             target_role: Optional target role for optimization
+            user_prompt: Optional free-form prompt for generic resume
+                        (e.g., "applying for concession stand position")
 
         Returns:
             Dictionary with resume structure and content
@@ -41,41 +45,49 @@ class ResumeGenerator:
         # 2. Fetch user profile
         profile = await self._fetch_user_profile(user_id)
 
-        # 3. Organize knowledge by type
+        # 3. If user_prompt provided, filter relevant facts FIRST
+        if user_prompt and not job_description:
+            # Generic mode: Select relevant facts based on prompt
+            knowledge_base = await self.select_relevant_facts(user_prompt, knowledge_base)
+
+        # 4. Organize knowledge by type
         organized_knowledge = self._organize_knowledge(knowledge_base)
 
-        # 4. Extract keywords from job description if provided
+        # 5. Extract keywords from job description if provided
         target_keywords = []
         if job_description:
             target_keywords = await self._extract_keywords(job_description)
+        elif user_prompt:
+            # Extract keywords from user prompt for generic mode
+            target_keywords = await self._extract_keywords_from_prompt(user_prompt)
 
-        # 5. Generate professional summary
+        # 6. Generate professional summary
         summary = await self._generate_summary(
             profile=profile,
             knowledge=organized_knowledge,
-            target_role=target_role,
+            target_role=target_role or user_prompt,
             keywords=target_keywords
         )
 
-        # 6. Generate work experience section
+        # 7. Generate work experience section
         experience = await self._generate_experience(
             knowledge=organized_knowledge,
             keywords=target_keywords
         )
 
-        # 7. Generate skills section
+        # 8. Generate skills section
         skills = await self._generate_skills(
             knowledge=organized_knowledge,
             keywords=target_keywords
         )
 
-        # 8. Generate education section
+        # 9. Generate education section
         education = self._generate_education(organized_knowledge)
 
-        # 9. Generate certifications section
+        # 10. Generate certifications section
         certifications = self._generate_certifications(organized_knowledge)
 
-        # 10. Assemble complete resume
+        # 11. Assemble complete resume
         resume_structure = {
             "contact_info": {
                 "name": profile.get("full_name", ""),
@@ -93,32 +105,199 @@ class ResumeGenerator:
             "metadata": {
                 "generated_at": datetime.utcnow().isoformat(),
                 "knowledge_base_entries_used": len(knowledge_base),
-                "target_role": target_role,
-                "job_targeted": bool(job_description)
+                "target_role": target_role or user_prompt,
+                "job_targeted": bool(job_description),
+                "generic_mode": bool(user_prompt and not job_description)
             }
         }
 
         return resume_structure
 
+    async def select_relevant_facts(
+        self,
+        user_prompt: str,
+        all_entities: List[Dict]
+    ) -> List[Dict]:
+        """
+        Use Claude to select relevant facts based on user's prompt
+
+        Example:
+            Prompt: "applying for concession stand position"
+            Picks: customer service skills, cash handling, NOT programming
+
+        Args:
+            user_prompt: User's description of what they're applying for
+            all_entities: All knowledge base entries
+
+        Returns:
+            Filtered list of relevant entities
+        """
+
+        # Build summary of all facts
+        facts_summary = []
+        for idx, entity in enumerate(all_entities):
+            fact_type = entity.get('knowledge_type', 'unknown')
+            title = entity.get('title', 'Untitled')
+            content_preview = str(entity.get('content', ''))[:100]
+
+            facts_summary.append(f"{idx}. [{fact_type}] {title}: {content_preview}")
+
+        facts_text = "\n".join(facts_summary[:100])  # Limit to 100 facts
+
+        prompt = f"""A user is creating a resume for: "{user_prompt}"
+
+Here are all their facts/experiences (ID, type, title):
+{facts_text}
+
+Select the MOST RELEVANT fact IDs (numbers) for this application.
+
+Rules:
+1. Select 10-20 most relevant facts
+2. Prioritize facts that match the role/industry
+3. Exclude obviously irrelevant facts
+4. Include transferable skills
+
+Examples:
+- If applying for "concession stand": Include customer service, cash handling, fast-paced work
+- If applying for "software engineer": Include programming, projects, technical skills
+- If applying for "marketing": Include communication, social media, campaigns
+
+Return ONLY a JSON array of fact IDs:
+[0, 3, 5, 12, 15]
+
+Return ONLY the JSON array, no explanation."""
+
+        try:
+            message = self.claude.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=300,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            response_text = message.content[0].text.strip()
+
+            # Parse JSON array
+            import json
+            selected_ids = json.loads(response_text)
+
+            # Filter entities
+            relevant_entities = [
+                all_entities[idx]
+                for idx in selected_ids
+                if idx < len(all_entities)
+            ]
+
+            print(f"Selected {len(relevant_entities)} relevant facts from {len(all_entities)} total")
+
+            return relevant_entities
+
+        except Exception as e:
+            print(f"Error selecting relevant facts: {str(e)}")
+            # Fallback: return all entities
+            return all_entities
+
+    async def _extract_keywords_from_prompt(self, user_prompt: str) -> List[str]:
+        """
+        Extract keywords from user's free-form prompt
+
+        Args:
+            user_prompt: e.g., "applying for concession stand position"
+
+        Returns:
+            List of relevant keywords
+        """
+
+        prompt_text = f"""Extract 5-10 key skills/keywords relevant to this application:
+
+"{user_prompt}"
+
+Return ONLY a comma-separated list of keywords.
+
+Examples:
+- "applying for concession stand" -> customer service, cash handling, food service, fast-paced, teamwork
+- "software engineering internship" -> programming, coding, algorithms, teamwork, problem-solving
+- "marketing coordinator role" -> marketing, social media, content creation, analytics, communication
+
+Prompt: {user_prompt}
+Keywords:"""
+
+        try:
+            message = self.claude.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=150,
+                messages=[{"role": "user", "content": prompt_text}]
+            )
+
+            keywords_text = message.content[0].text.strip()
+            keywords = [k.strip() for k in keywords_text.split(',')]
+
+            return keywords
+
+        except Exception as e:
+            print(f"Error extracting keywords from prompt: {str(e)}")
+            return []
+
     async def _fetch_knowledge_base(self, user_id: str) -> List[Dict]:
-        """Fetch all knowledge base entries for user"""
-        result = self.supabase.table("user_knowledge_base")\
+        """Fetch all confirmed knowledge entities for user"""
+        # FIXED: Was querying user_knowledge_base (empty), now queries knowledge_entities (has data)
+        result = self.supabase.table("knowledge_entities")\
             .select("*")\
             .eq("user_id", user_id)\
+            .eq("is_confirmed", True)\
             .order("created_at", desc=True)\
             .execute()
 
-        return result.data
+        # Transform knowledge_entities schema to match expected format
+        transformed_data = []
+        for entity in result.data:
+            # Map entity_type to knowledge_type
+            knowledge_type = self._map_entity_type_to_knowledge_type(entity.get('entity_type', 'experience'))
+
+            transformed_data.append({
+                'id': entity['id'],
+                'user_id': entity['user_id'],
+                'parent_id': entity.get('parent_id'),  # 🎯 Preserve parent-child relationships
+                'entity_type': entity.get('entity_type'),  # Keep original type for reference
+                'title': entity.get('title', ''),
+                'content': entity.get('structured_data', {}) or {'description': entity.get('description', '')},
+                'knowledge_type': knowledge_type,
+                'tags': entity.get('tags', []),
+                'date_range': self._build_date_range(entity.get('start_date'), entity.get('end_date')),
+                'created_at': entity.get('created_at', '')
+            })
+
+        return transformed_data
+
+    def _map_entity_type_to_knowledge_type(self, entity_type: str) -> str:
+        """Map knowledge_entities.entity_type to knowledge_type"""
+        mapping = {
+            'job': 'experience',
+            'work_experience': 'experience',
+            'job_experience': 'experience',
+            'job_detail': 'accomplishment',
+            'education': 'education',
+            'skill': 'skill',
+            'achievement': 'accomplishment',
+            'accomplishment': 'accomplishment',
+            'certification': 'certification',
+            'project': 'project',
+            'metric': 'metric',
+            'story': 'story'
+        }
+        return mapping.get(entity_type.lower(), 'experience')
+
+    def _build_date_range(self, start_date, end_date) -> Optional[str]:
+        """Build PostgreSQL date range format from start/end dates"""
+        if not start_date and not end_date:
+            return None
+
+        start = start_date or '1900-01-01'
+        end = end_date or '9999-12-31'
+        return f"[{start},{end})"
 
     async def _fetch_user_profile(self, user_id: str) -> Dict:
-        """Fetch user profile information"""
-        result = self.supabase.table("user_profiles")\
-            .select("*")\
-            .eq("id", user_id)\
-            .single()\
-            .execute()
-
-        return result.data
+        """Fetch user profile information, creating default if missing"""
+        return await ensure_user_profile(user_id)
 
     def _organize_knowledge(self, knowledge_base: List[Dict]) -> Dict[str, List[Dict]]:
         """Organize knowledge entries by type"""
@@ -226,10 +405,19 @@ KEY EXPERIENCES:
 TARGET KEYWORDS (incorporate naturally):
 {keywords_text}
 
+🚨 CRITICAL ANTI-HALLUCINATION RULES (MANDATORY):
+1. ONLY use information EXPLICITLY provided above
+2. NEVER invent years of experience, metrics, skills, or achievements
+3. If a detail is "N/A" or missing, DO NOT fabricate it
+4. If accomplishments list is empty, write a simple summary WITHOUT metrics
+5. Every skill mentioned MUST appear in "Top Skills" or "Key Experiences" above
+6. NO generic claims like "proven track record" without specific evidence
+7. If you cannot write a fact-based summary, say "Insufficient information"
+
 ATS OPTIMIZATION RULES:
-1. Start with job title and years of experience
-2. Include 3-4 top skills/strengths
-3. Mention 1-2 quantifiable achievements
+1. Start with job title and years of experience (if provided)
+2. Include 3-4 top skills/strengths that are LISTED above
+3. Mention 1-2 quantifiable achievements (ONLY if listed in accomplishments)
 4. Naturally integrate target keywords
 5. Keep to 3-4 sentences maximum
 6. Use strong action-oriented language
@@ -324,28 +512,41 @@ Create 5-7 ATS-optimized bullet points for this work experience.
 POSITION: {experience.get('title', 'N/A')}
 COMPANY: {experience['content'].get('company', 'N/A')}
 
-ACCOMPLISHMENTS:
+ACCOMPLISHMENTS (SOURCE OF TRUTH):
 {accomplishments_text}
 
-RELEVANT STORIES/CONTEXT:
+RELEVANT STORIES/CONTEXT (SOURCE OF TRUTH):
 {stories_text}
 
 TARGET KEYWORDS (incorporate naturally):
 {keywords_text}
 
-ATS OPTIMIZATION RULES (follow these EXACTLY):
-1. Use formula: [Action Verb] + [What You Did] + [Quantifiable Result]
+🚨🚨 CRITICAL ANTI-HALLUCINATION RULES (VIOLATION = FAILURE) 🚨🚨:
+1. **ONLY SOURCE MATERIAL ABOVE** - Every single fact, metric, technology, team size, or achievement MUST come from "ACCOMPLISHMENTS" or "STORIES" sections above
+2. **ZERO FABRICATION** - If no metrics are provided, DO NOT invent percentages, dollar amounts, team sizes, or timeframes
+3. **EMPTY SOURCE = GENERIC BULLETS** - If accomplishments/stories sections are empty, write simple responsibility-focused bullets WITHOUT specific metrics
+4. **CITE YOUR SOURCE** - Each bullet must be traceable to a specific line in the SOURCE sections
+5. **NO "ASSUMED" DETAILS** - Never add details like "increased by X%", "managed team of Y", "delivered in Z weeks" unless EXPLICITLY stated above
+6. **QUALITY OVER QUANTITY** - Better to write 3 accurate bullets than 7 fabricated ones
+7. **WHEN IN DOUBT, LEAVE IT OUT** - If you're uncertain about a detail, omit it
+
+ATS OPTIMIZATION RULES:
+1. Use formula: [Action Verb] + [What You Did] + [Quantifiable Result IF PROVIDED]
 2. Start each bullet with a strong action verb (Led, Developed, Increased, Reduced, etc.)
-3. Include specific metrics and numbers wherever possible
-4. Naturally incorporate target keywords
+3. Include metrics/numbers ONLY if they appear in SOURCE sections above
+4. Naturally incorporate target keywords where truthful
 5. Keep bullets concise (1-2 lines each)
-6. Focus on impact and achievements, not just responsibilities
+6. Focus on impact and achievements when evidence exists
 7. Use past tense for completed roles
 
-Examples of GOOD bullets:
+Examples of GOOD bullets WITH evidence:
 • Led cross-functional team of 12 using Agile methodology to deliver $2.5M enterprise software project 3 weeks ahead of schedule
 • Implemented Salesforce CRM integration reducing sales cycle time by 30% and increasing conversion rate from 12% to 18%
-• Developed automated testing framework that reduced QA time by 40% and improved bug detection rate by 65%
+
+Examples of GOOD bullets WITHOUT specific evidence:
+• Collaborated with engineering team to deliver product features aligned with user needs
+• Maintained codebase and implemented bug fixes to improve system stability
+• Participated in agile development process and contributed to sprint planning
 
 Return ONLY the bullet points (starting with •), no explanations or additional text."""
 
@@ -445,19 +646,50 @@ Keep it concise - max 8-10 skills per category."""
         return certifications
 
     def _is_related(self, item: Dict, experience: Dict) -> bool:
-        """Check if a knowledge item is related to an experience"""
-        # Check if date ranges overlap
-        if item.get('date_range') and experience.get('date_range'):
-            # Simple overlap check - can be improved
+        """
+        Check if a knowledge item is related to an experience
+
+        🎯 CHRONOLOGICAL ACCURACY:
+        - job_details are linked via parent_id (strongest relationship)
+        - Date range overlap means accomplishment happened during this job
+        - This prevents "worked with 4 nonprofits" (Consultant) from appearing under Teacher
+        """
+
+        # 1. STRONGEST: Check parent-child relationship (job_detail -> job)
+        if item.get('parent_id') == experience.get('id'):
             return True
 
-        # Check if tags overlap
+        # 2. STRONG: Check if both have date ranges and they overlap
+        item_dates = item.get('date_range')
+        exp_dates = experience.get('date_range')
+
+        if item_dates and exp_dates:
+            try:
+                # Parse date ranges: [start,end)
+                item_start, item_end = item_dates.strip('[]()').split(',')
+                exp_start, exp_end = exp_dates.strip('[]()').split(',')
+
+                # Check for actual overlap (not just existence of dates)
+                # Convert "9999-12-31" to "now" for current jobs
+                item_end = None if item_end == '9999-12-31' else item_end
+                exp_end = None if exp_end == '9999-12-31' else exp_end
+
+                # If start date is within experience date range, they overlap
+                if exp_start <= item_start and (exp_end is None or item_start <= exp_end):
+                    return True
+
+            except Exception as e:
+                print(f"Date parsing error in _is_related: {e}")
+                # Don't assume relationship on parse error
+                pass
+
+        # 3. MEDIUM: Check if tags overlap
         item_tags = set(item.get('tags', []))
         exp_tags = set(experience.get('tags', []))
         if item_tags & exp_tags:
             return True
 
-        # Check if company mentioned in content
+        # 4. WEAK: Check if company mentioned in content
         exp_company = experience['content'].get('company', '')
         item_content_str = str(item.get('content', ''))
         if exp_company and exp_company.lower() in item_content_str.lower():

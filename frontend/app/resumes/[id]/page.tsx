@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import ResumeEditor from '@/components/ResumeEditor'
 import TruthCheckReview from '@/components/TruthCheckReview'
 import { API_URL } from '@/lib/config'
@@ -11,21 +12,36 @@ export default function ResumeDetailPage() {
   const router = useRouter()
   const resumeId = params.id as string
 
+  const [user, setUser] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'edit' | 'review' | 'preview'>('edit')
   const [resume, setResume] = useState<any>(null)
   const [flags, setFlags] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchResume()
+    checkUserAndFetchResume()
   }, [resumeId])
 
-  const fetchResume = async () => {
-    try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'test-user-id'
+  const checkUserAndFetchResume = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
 
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+
+    setUser(user)
+    fetchResume(user.id)
+  }
+
+  const fetchResume = async (userId: string) => {
+    try {
       const res = await fetch(`${API_URL}/resumes/${resumeId}?user_id=${userId}`)
+
+      if (!res.ok) {
+        throw new Error('Failed to fetch resume')
+      }
+
       const data = await res.json()
 
       setResume(data.resume)
@@ -38,10 +54,9 @@ export default function ResumeDetailPage() {
   }
 
   const handleSave = async (updatedResume: any) => {
-    // TODO: Replace with actual user ID from auth
-    const userId = 'test-user-id'
+    if (!user) return
 
-    const res = await fetch(`${API_URL}/resumes/${resumeId}?user_id=${userId}`, {
+    const res = await fetch(`${API_URL}/resumes/${resumeId}?user_id=${user.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ resume_structure: updatedResume })
@@ -49,15 +64,14 @@ export default function ResumeDetailPage() {
 
     const data = await res.json()
     if (data.success) {
-      setResume({ ...resume, resume_structure: data.resume })
+      setResume({ ...resume, content: data.resume })
     }
   }
 
   const handleResolveFlag = async (flagId: string, resolution: string) => {
-    // TODO: Replace with actual user ID from auth
-    const userId = 'test-user-id'
+    if (!user) return
 
-    const res = await fetch(`${API_URL}/resumes/flags/${flagId}/resolve?user_id=${userId}`, {
+    const res = await fetch(`${API_URL}/resumes/flags/${flagId}/resolve?user_id=${user.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ resolution_notes: resolution })
@@ -65,20 +79,19 @@ export default function ResumeDetailPage() {
 
     if (res.ok) {
       // Refresh flags
-      await fetchResume()
+      await fetchResume(user.id)
     }
   }
 
   const handleFinalize = async () => {
+    if (!user) return
+
     if (!confirm('Finalize this resume? You should resolve all critical flags first.')) {
       return
     }
 
     try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'test-user-id'
-
-      const res = await fetch(`${API_URL}/resumes/${resumeId}/finalize?user_id=${userId}`, {
+      const res = await fetch(`${API_URL}/resumes/${resumeId}/finalize?user_id=${user.id}`, {
         method: 'POST'
       })
 
@@ -86,7 +99,7 @@ export default function ResumeDetailPage() {
 
       if (data.success) {
         alert('Resume finalized successfully!')
-        await fetchResume()
+        await fetchResume(user.id)
       } else {
         alert(data.error || 'Failed to finalize resume')
       }
@@ -96,11 +109,10 @@ export default function ResumeDetailPage() {
   }
 
   const handleExportHTML = async () => {
-    try {
-      // TODO: Replace with actual user ID from auth
-      const userId = 'test-user-id'
+    if (!user) return
 
-      const res = await fetch(`${API_URL}/resumes/${resumeId}/export/html?user_id=${userId}`)
+    try {
+      const res = await fetch(`${API_URL}/resumes/${resumeId}/export/html?user_id=${user.id}`)
       const data = await res.json()
 
       // Create a download
@@ -119,10 +131,10 @@ export default function ResumeDetailPage() {
   }
 
   const handleExportPDF = async () => {
-    try {
-      const userId = 'test-user-id'
+    if (!user) return
 
-      const res = await fetch(`${API_URL}/resumes/${resumeId}/export/pdf?user_id=${userId}`)
+    try {
+      const res = await fetch(`${API_URL}/resumes/${resumeId}/export/pdf?user_id=${user.id}`)
 
       if (!res.ok) {
         throw new Error('Failed to export PDF')
@@ -152,10 +164,10 @@ export default function ResumeDetailPage() {
   }
 
   const handleExportDOCX = async () => {
-    try {
-      const userId = 'test-user-id'
+    if (!user) return
 
-      const res = await fetch(`${API_URL}/resumes/${resumeId}/export/docx?user_id=${userId}`)
+    try {
+      const res = await fetch(`${API_URL}/resumes/${resumeId}/export/docx?user_id=${user.id}`)
 
       if (!res.ok) {
         throw new Error('Failed to export DOCX')
@@ -317,7 +329,7 @@ export default function ResumeDetailPage() {
         {activeTab === 'edit' && (
           <ResumeEditor
             resumeId={resumeId}
-            initialData={resume.resume_structure}
+            initialData={resume.content}
             onSave={handleSave}
           />
         )}

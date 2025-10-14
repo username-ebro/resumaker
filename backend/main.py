@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import os
 
 # Import routers
-from app.routers import auth, upload, imports, conversation, references, resumes, jobs
+from app.routers import auth, upload, imports, conversation, references, resumes, jobs, knowledge
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +26,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
+        "http://localhost:3001",  # Local development (Next.js default)
         "https://resumaker.vercel.app",  # Production frontend
         "https://*.vercel.app"  # Vercel preview deployments
     ],
@@ -42,6 +43,7 @@ app.include_router(conversation.router)
 app.include_router(references.router)
 app.include_router(resumes.router)
 app.include_router(jobs.router)
+app.include_router(knowledge.router)
 
 @app.get("/")
 async def root():

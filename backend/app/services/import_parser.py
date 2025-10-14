@@ -95,7 +95,11 @@ Be thorough - extract EVERYTHING that could be useful for a resume."""
         elif response_text.startswith('```'):
             response_text = response_text.split('```')[1].split('```')[0].strip()
 
-        return json.loads(response_text)
+        try:
+            return json.loads(response_text)
+        except json.JSONDecodeError as e:
+            # If JSON parsing fails, return a structured error with the raw response
+            raise Exception(f"Failed to parse AI response as JSON. Error: {str(e)}. Response preview: {response_text[:200]}...")
 
 # Singleton
 import_parser = ImportParser()

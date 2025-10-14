@@ -1,5 +1,5 @@
 """
-Truth Verification Algorithm
+Fact Verification Algorithm
 Compares resume claims against knowledge base evidence
 Conservative thresholds to maintain integrity
 """
@@ -9,7 +9,7 @@ import anthropic
 import os
 from ..database import get_supabase
 
-class TruthChecker:
+class FactChecker:
     def __init__(self):
         self.claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.supabase = get_supabase()
@@ -50,7 +50,8 @@ class TruthChecker:
         summary_flags = await self._verify_summary(
             resume_structure['summary'],
             knowledge_base,
-            resume_version_id
+            resume_version_id,
+            user_id
         )
         flags.extend(summary_flags)
 
@@ -60,7 +61,8 @@ class TruthChecker:
                 experience,
                 knowledge_base,
                 resume_version_id,
-                exp_idx
+                exp_idx,
+                user_id
             )
             flags.extend(exp_flags)
 
@@ -68,7 +70,8 @@ class TruthChecker:
         skills_flags = await self._verify_skills(
             resume_structure['skills'],
             knowledge_base,
-            resume_version_id
+            resume_version_id,
+            user_id
         )
         flags.extend(skills_flags)
 
@@ -76,7 +79,8 @@ class TruthChecker:
         edu_flags = await self._verify_education(
             resume_structure['education'],
             knowledge_base,
-            resume_version_id
+            resume_version_id,
+            user_id
         )
         flags.extend(edu_flags)
 
@@ -84,7 +88,8 @@ class TruthChecker:
         cert_flags = await self._verify_certifications(
             resume_structure['certifications'],
             knowledge_base,
-            resume_version_id
+            resume_version_id,
+            user_id
         )
         flags.extend(cert_flags)
 
@@ -108,19 +113,65 @@ class TruthChecker:
         }
 
     async def _fetch_knowledge_base(self, user_id: str) -> List[Dict]:
-        """Fetch all verified knowledge base entries"""
-        result = self.supabase.table("user_knowledge_base")\
+        """Fetch all confirmed knowledge entities"""
+        # FIXED: Was querying user_knowledge_base (empty), now queries knowledge_entities (has data)
+        result = self.supabase.table("knowledge_entities")\
             .select("*")\
             .eq("user_id", user_id)\
+            .eq("is_confirmed", True)\
             .execute()
 
-        return result.data
+        # Transform knowledge_entities schema to format expected by verification
+        transformed_data = []
+        for entity in result.data:
+            # Map entity_type to knowledge_type
+            knowledge_type = self._map_entity_type_to_knowledge_type(entity.get('entity_type', 'experience'))
+
+            transformed_data.append({
+                'id': entity['id'],
+                'user_id': entity['user_id'],
+                'title': entity.get('title', ''),
+                'content': entity.get('structured_data', {}) or {'description': entity.get('description', '')},
+                'knowledge_type': knowledge_type,
+                'tags': entity.get('tags', []),
+                'date_range': self._build_date_range(entity.get('start_date'), entity.get('end_date')),
+                'created_at': entity.get('created_at', '')
+            })
+
+        return transformed_data
+
+    def _map_entity_type_to_knowledge_type(self, entity_type: str) -> str:
+        """Map knowledge_entities.entity_type to knowledge_type"""
+        mapping = {
+            'job': 'experience',
+            'work_experience': 'experience',
+            'job_experience': 'experience',
+            'job_detail': 'accomplishment',
+            'education': 'education',
+            'skill': 'skill',
+            'achievement': 'accomplishment',
+            'accomplishment': 'accomplishment',
+            'certification': 'certification',
+            'project': 'project',
+            'metric': 'metric',
+            'story': 'story'
+        }
+        return mapping.get(entity_type.lower(), 'experience')
+
+    def _build_date_range(self, start_date, end_date):
+        """Build PostgreSQL date range format from start/end dates"""
+        if not start_date and not end_date:
+            return None
+        start = start_date or '1900-01-01'
+        end = end_date or '9999-12-31'
+        return f"[{start},{end})"
 
     async def _verify_summary(
         self,
         summary: str,
         knowledge_base: List[Dict],
-        resume_version_id: str
+        resume_version_id: str,
+        user_id: str
     ) -> List[Dict]:
         """Verify claims in professional summary"""
 
@@ -197,13 +248,11 @@ If everything is supported, return: []"""
             for issue in issues:
                 flags.append({
                     "resume_version_id": resume_version_id,
-                    "section": "summary",
-                    "claim_text": issue['claim'],
+                    "user_id": user_id,
+                    "flagged_content": issue['claim'],
                     "flag_reason": issue['reason'],
                     "severity": issue['severity'],
-                    "explanation": issue['explanation'],
-                    "suggested_fix": issue['suggestion'],
-                    "auto_flagged": True
+                    "explanation": f"{issue['explanation']} | Suggestion: {issue['suggestion']}"
                 })
             return flags
         except:
@@ -214,7 +263,8 @@ If everything is supported, return: []"""
         experience: Dict,
         knowledge_base: List[Dict],
         resume_version_id: str,
-        exp_idx: int
+        exp_idx: int,
+        user_id: str
     ) -> List[Dict]:
         """Verify work experience bullets against evidence"""
 
@@ -288,14 +338,11 @@ Return JSON array. If all bullets supported, return: []"""
 
                 flags.append({
                     "resume_version_id": resume_version_id,
-                    "section": f"experience_{exp_idx}",
-                    "claim_text": issue['claim'],
-                    "context": bullet_text,
+                    "user_id": user_id,
+                    "flagged_content": issue['claim'],
                     "flag_reason": issue['reason'],
                     "severity": issue['severity'],
-                    "explanation": issue['explanation'],
-                    "suggested_fix": issue['suggestion'],
-                    "auto_flagged": True
+                    "explanation": f"Experience {exp_idx+1}: {issue['explanation']} | Suggestion: {issue['suggestion']} | Context: {bullet_text}"
                 })
             return flags
         except:
@@ -305,7 +352,8 @@ Return JSON array. If all bullets supported, return: []"""
         self,
         skills: Dict[str, List[str]],
         knowledge_base: List[Dict],
-        resume_version_id: str
+        resume_version_id: str,
+        user_id: str
     ) -> List[Dict]:
         """Verify skills against knowledge base evidence"""
 
@@ -338,13 +386,11 @@ Return JSON array. If all bullets supported, return: []"""
             if not in_kb_skills and not mentioned_in_evidence:
                 flags.append({
                     "resume_version_id": resume_version_id,
-                    "section": "skills",
-                    "claim_text": skill,
+                    "user_id": user_id,
+                    "flagged_content": skill,
                     "flag_reason": "no_evidence",
-                    "severity": "low",  # Skills without evidence = low severity (may be general skills)
-                    "explanation": f"Skill '{skill}' not found in knowledge base or evidence",
-                    "suggested_fix": "Add evidence of this skill through accomplishments or remove if not applicable",
-                    "auto_flagged": True
+                    "severity": "low",
+                    "explanation": f"Skill '{skill}' not found in knowledge base. Consider adding evidence through accomplishments or remove if not applicable."
                 })
 
         return flags
@@ -353,7 +399,8 @@ Return JSON array. If all bullets supported, return: []"""
         self,
         education: List[Dict],
         knowledge_base: List[Dict],
-        resume_version_id: str
+        resume_version_id: str,
+        user_id: str
     ) -> List[Dict]:
         """Verify education claims"""
 
@@ -378,13 +425,11 @@ Return JSON array. If all bullets supported, return: []"""
             if not matching:
                 flags.append({
                     "resume_version_id": resume_version_id,
-                    "section": "education",
-                    "claim_text": f"{degree} from {institution}",
+                    "user_id": user_id,
+                    "flagged_content": f"{degree} from {institution}",
                     "flag_reason": "no_evidence",
-                    "severity": "high",  # Education without evidence is serious
-                    "explanation": "No evidence of this degree in knowledge base",
-                    "suggested_fix": "Add education entry to knowledge base or verify accuracy",
-                    "auto_flagged": True
+                    "severity": "high",
+                    "explanation": "No evidence of this degree in knowledge base. Add education entry or verify accuracy."
                 })
 
         return flags
@@ -393,7 +438,8 @@ Return JSON array. If all bullets supported, return: []"""
         self,
         certifications: List[Dict],
         knowledge_base: List[Dict],
-        resume_version_id: str
+        resume_version_id: str,
+        user_id: str
     ) -> List[Dict]:
         """Verify certification claims"""
 
@@ -416,13 +462,11 @@ Return JSON array. If all bullets supported, return: []"""
             if not matching:
                 flags.append({
                     "resume_version_id": resume_version_id,
-                    "section": "certifications",
-                    "claim_text": cert_name,
+                    "user_id": user_id,
+                    "flagged_content": cert_name,
                     "flag_reason": "no_evidence",
-                    "severity": "high",  # Certifications are verifiable, so high severity
-                    "explanation": "No evidence of this certification in knowledge base",
-                    "suggested_fix": "Add certification to knowledge base or remove from resume",
-                    "auto_flagged": True
+                    "severity": "high",
+                    "explanation": "No evidence of this certification in knowledge base. Add certification or remove from resume."
                 })
 
         return flags

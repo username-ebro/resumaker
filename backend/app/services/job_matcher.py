@@ -155,8 +155,137 @@ class JobMatcher:
             "ats_compatibility": self._get_ats_recommendations(job_data.get('ats_system'))
         }
 
+    async def extract_keywords_with_ai(self, job_description: str) -> Dict[str, List[str]]:
+        """
+        Enhanced keyword extraction using AI
+        Categorizes keywords by importance and type
+
+        Returns:
+            Dictionary with categorized keywords:
+            {
+                "critical": List[str],  # Must-have keywords
+                "important": List[str],  # Should-have keywords
+                "nice_to_have": List[str],  # Bonus keywords
+                "technical": List[str],  # Technical skills
+                "soft_skills": List[str]  # Soft skills
+            }
+        """
+        prompt = f"""Analyze this job description and extract the 15 most important keywords.
+Categorize them by criticality and type.
+
+Job Description:
+{job_description}
+
+Return in this EXACT JSON format:
+{{
+  "critical": ["keyword1", "keyword2"],
+  "important": ["keyword3", "keyword4"],
+  "nice_to_have": ["keyword5", "keyword6"],
+  "technical": ["Python", "AWS"],
+  "soft_skills": ["leadership", "communication"]
+}}
+
+Rules:
+1. Critical: Skills mentioned multiple times or in "required" sections
+2. Important: Skills in "preferred" or "responsibilities" sections
+3. Nice to have: Skills mentioned once or as "plus"
+4. Technical: Programming languages, tools, technologies
+5. Soft skills: Communication, leadership, teamwork, etc.
+
+Return ONLY valid JSON, no markdown."""
+
+        message = self.claude.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=800,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        response_text = message.content[0].text.strip()
+
+        # Clean JSON
+        if response_text.startswith('```json'):
+            response_text = response_text.split('```json')[1].split('```')[0].strip()
+        elif response_text.startswith('```'):
+            response_text = response_text.split('```')[1].split('```')[0].strip()
+
+        import json
+        categorized_keywords = json.loads(response_text)
+
+        return categorized_keywords
+
+    async def categorize_requirements(self, job_description: str) -> Dict[str, Any]:
+        """
+        Categorize job requirements into MUST_HAVE vs NICE_TO_HAVE
+        More sophisticated than simple extraction
+
+        Returns:
+            {
+                "must_have": {
+                    "skills": List[str],
+                    "experience_years": int or None,
+                    "education": str or None,
+                    "certifications": List[str]
+                },
+                "nice_to_have": {
+                    "skills": List[str],
+                    "experience_areas": List[str],
+                    "certifications": List[str]
+                },
+                "deal_breakers": List[str]  # Hard requirements that auto-reject
+            }
+        """
+        prompt = f"""Analyze this job description and categorize ALL requirements.
+
+Job Description:
+{job_description}
+
+Identify:
+1. MUST HAVE requirements (will auto-reject if missing)
+2. NICE TO HAVE requirements (preferred but not required)
+3. Deal breakers (explicit requirements like "must have US work authorization")
+
+Return in this EXACT JSON format:
+{{
+  "must_have": {{
+    "skills": ["skill1", "skill2"],
+    "experience_years": 5,
+    "education": "Bachelor's degree in Computer Science",
+    "certifications": ["AWS Certified"]
+  }},
+  "nice_to_have": {{
+    "skills": ["skill3", "skill4"],
+    "experience_areas": ["fintech", "startup"],
+    "certifications": ["PMP"]
+  }},
+  "deal_breakers": ["Must be authorized to work in US", "Must pass background check"]
+}}
+
+Return ONLY valid JSON, no markdown."""
+
+        message = self.claude.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        response_text = message.content[0].text.strip()
+
+        # Clean JSON
+        if response_text.startswith('```json'):
+            response_text = response_text.split('```json')[1].split('```')[0].strip()
+        elif response_text.startswith('```'):
+            response_text = response_text.split('```')[1].split('```')[0].strip()
+
+        import json
+        categorized_reqs = json.loads(response_text)
+
+        return categorized_reqs
+
     async def _extract_keywords(self, job_description: str) -> List[str]:
-        """Extract key terms from job description"""
+        """
+        Extract key terms from job description (legacy method)
+        Use extract_keywords_with_ai() for enhanced extraction
+        """
         prompt = f"""Extract 15-25 of the most important keywords from this job description.
 
 Focus on:
@@ -448,11 +577,10 @@ other: keyword7"""
             "job_title": job_data.get('job_title'),
             "company_name": job_data.get('company'),
             "job_url": job_data.get('job_url'),
-            "description_text": job_description_full,
+            "job_description": job_description_full,
             "extracted_keywords": job_data['keywords']['all'],
             "required_skills": job_data['keywords'].get('required', []),
             "preferred_skills": job_data['keywords'].get('preferred', []),
-            "experience_level": job_data.get('experience_level'),
             "ats_system_id": ats_system_id
         }
 

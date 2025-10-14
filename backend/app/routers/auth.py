@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
-from app.database import get_supabase
+from app.database import get_supabase, get_supabase_auth
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -19,8 +19,8 @@ class LoginRequest(BaseModel):
 async def signup(request: SignupRequest):
     """Create new user account"""
     try:
-        supabase = get_supabase()
-        response = supabase.auth.sign_up({
+        supabase_auth = get_supabase_auth()
+        response = supabase_auth.auth.sign_up({
             "email": request.email,
             "password": request.password,
             "options": {
@@ -31,8 +31,9 @@ async def signup(request: SignupRequest):
         })
 
         if response.user:
-            # Create user profile
-            supabase.table("user_profiles").insert({
+            # Create user profile (using admin client to bypass RLS)
+            supabase_admin = get_supabase()
+            supabase_admin.table("user_profiles").insert({
                 "id": response.user.id,
                 "email": request.email,
                 "full_name": request.full_name
@@ -49,8 +50,8 @@ async def signup(request: SignupRequest):
 async def login(request: LoginRequest):
     """Login user"""
     try:
-        supabase = get_supabase()
-        response = supabase.auth.sign_in_with_password({
+        supabase_auth = get_supabase_auth()
+        response = supabase_auth.auth.sign_in_with_password({
             "email": request.email,
             "password": request.password
         })
@@ -66,8 +67,8 @@ async def login(request: LoginRequest):
 async def logout():
     """Logout user"""
     try:
-        supabase = get_supabase()
-        supabase.auth.sign_out()
+        supabase_auth = get_supabase_auth()
+        supabase_auth.auth.sign_out()
         return {"message": "Logged out successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

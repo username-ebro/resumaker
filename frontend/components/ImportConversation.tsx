@@ -14,7 +14,8 @@ export default function ImportConversation() {
     setError('');
 
     try {
-      const response = await fetch('${API_URL}/imports/parse', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/imports/parse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -38,15 +39,15 @@ export default function ImportConversation() {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h3 className="text-lg font-semibold mb-4">Import Conversation</h3>
+    <div className="brutal-box brutal-shadow p-6">
+      <h3 className="text-lg mb-4">Import Conversation</h3>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">Source</label>
+        <label className="block text-xs font-bold mb-2 uppercase">Source</label>
         <select
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
-          className="w-full px-3 py-2 border rounded"
+          className="brutal-input"
         >
           <option value="chatgpt">ChatGPT</option>
           <option value="claude">Claude</option>
@@ -55,34 +56,37 @@ export default function ImportConversation() {
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">
-          Paste your conversation
+        <label className="block text-xs font-bold mb-2 uppercase">
+          Paste Conversation
         </label>
         <textarea
           value={conversationText}
           onChange={(e) => setConversationText(e.target.value)}
-          className="w-full px-3 py-2 border rounded h-48"
-          placeholder="Paste your entire conversation here..."
+          className="brutal-input h-48"
+          placeholder="Paste entire conversation..."
         />
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 mb-4">
-          {error}
+        <div className="p-3 brutal-box bg-red-50 mb-4">
+          <span className="font-bold">ERROR:</span> {error}
         </div>
       )}
 
       <button
         onClick={handleImport}
         disabled={!conversationText || parsing}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        className="brutal-btn brutal-btn-primary brutal-shadow w-full disabled:opacity-50 flex items-center justify-center gap-2"
       >
-        {parsing ? 'Parsing...' : 'Import & Extract Data'}
+        {parsing && (
+          <div className="cool-spinner h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+        )}
+        {parsing ? 'Parsing...' : 'Import & Extract'}
       </button>
 
       {result && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
-          <p className="font-semibold text-green-800 mb-2">✅ Imported!</p>
+        <div className="mt-4 p-4 brutal-box-seafoam brutal-shadow-seafoam">
+          <p className="font-bold mb-2">✓ IMPORTED</p>
           <div className="text-sm">
             <p>Accomplishments: {result.accomplishments?.length || 0}</p>
             <p>Skills: {result.skills?.technical?.length || 0} technical</p>
