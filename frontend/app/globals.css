@@ -116,3 +116,27 @@ h1, h2, h3 {
 .cool-spinner {
   animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Improve focus visibility for accessibility */
+.brutal-input:focus,
+.brutal-btn:focus,
+button:focus {
+  outline: 3px solid #000;
+  outline-offset: 2px;
+}
+
+/* Toast animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}

@@ -333,10 +333,10 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          {activeTab === 'conversation' && <ConversationInterface userId={user.id} />}
+          {activeTab === 'conversation' && user && <ConversationInterface userId={user.id} />}
           {activeTab === 'upload' && <UploadResume />}
           {activeTab === 'import' && <ImportConversation />}
-          {activeTab === 'generate' && (
+          {activeTab === 'generate' && user && (
             <>
               {/* Knowledge Confirmation Gate */}
               {confirmedCount < 3 && (
