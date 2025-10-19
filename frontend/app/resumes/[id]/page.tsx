@@ -13,7 +13,10 @@ import { useToast } from '@/components/Toast'
 interface Resume {
   id: string
   user_id: string
-  content: string
+  content: Record<string, unknown> // JSON object containing resume structure
+  html_content: string
+  status: string
+  version_number: number
   ats_score: number
   job_id?: string
   is_starred: boolean
@@ -25,8 +28,14 @@ interface Resume {
 interface Flag {
   id: string
   resume_id: string
+  section: string
   claim_text: string
-  severity: string
+  context?: string
+  flag_reason: string
+  severity: 'low' | 'medium' | 'high'
+  explanation: string
+  suggested_fix: string
+  resolved: boolean
   resolution_notes?: string
   resolved_at?: string
 }
@@ -78,8 +87,8 @@ export default function ResumeDetailPage() {
     }
   }
 
-  const handleSave = async (updatedResume: Record<string, unknown>) => {
-    if (!user) return
+  const handleSave = async (updatedResume: any) => {
+    if (!user || !resume) return
 
     const res = await fetch(`${API_URL}/resumes/${resumeId}?user_id=${user.id}`, {
       method: 'PUT',
