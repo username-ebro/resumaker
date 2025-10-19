@@ -9,21 +9,7 @@ import TruthCheckReview from '@/components/TruthCheckReview'
 import { API_URL } from '@/lib/config'
 import DOMPurify from 'dompurify'
 import { useToast } from '@/components/Toast'
-
-interface Resume {
-  id: string
-  user_id: string
-  content: Record<string, unknown> // JSON object containing resume structure
-  html_content: string
-  status: string
-  version_number: number
-  ats_score: number
-  job_id?: string
-  is_starred: boolean
-  is_archived: boolean
-  created_at: string
-  updated_at: string
-}
+import { Resume, ResumeStructure } from '@/types'
 
 interface Flag {
   id: string

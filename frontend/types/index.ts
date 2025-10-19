@@ -6,10 +6,44 @@ export interface User {
   created_at: string;
 }
 
+export interface Experience {
+  title: string;
+  company: string;
+  location?: string;
+  start_date: string;
+  end_date: string;
+  bullets: string[];
+}
+
+export interface ResumeStructure {
+  contact_info: {
+    name: string;
+    email: string;
+    phone?: string;
+    location?: string;
+    linkedin?: string;
+    portfolio?: string;
+  };
+  summary: string;
+  experience: Experience[];
+  skills: { [key: string]: string[] };
+  education: Education[];
+  certifications: Certification[];
+  optimization_report?: {
+    ats_score: number;
+    improvements_made: string[];
+    warnings: string[];
+    recommendations: string[];
+  };
+}
+
 export interface Resume {
   id: string;
   user_id: string;
   html_content: string;
+  content: ResumeStructure;
+  status: string;
+  version_number: number;
   ats_score: number;
   job_id: string | null;
   is_starred: boolean;
