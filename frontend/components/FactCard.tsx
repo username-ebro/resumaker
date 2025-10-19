@@ -173,6 +173,7 @@ export default function FactCard({
               onClick={() => setIsEditing(true)}
               className="brutal-btn text-xs px-2 py-0.5 h-6"
               title="Edit"
+              aria-label="Edit fact"
             >
               ✏️
             </button>
@@ -180,6 +181,7 @@ export default function FactCard({
               onClick={() => setShowDeleteConfirm(true)}
               className="brutal-btn text-xs px-2 py-0.5 h-6 border-red-600 text-red-600"
               title="Delete"
+              aria-label="Delete fact"
             >
               🗑️
             </button>

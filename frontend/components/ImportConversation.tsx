@@ -31,8 +31,12 @@ export default function ImportConversation() {
       } else {
         setError('Parsing failed');
       }
-    } catch (err: any) {
-      setError(err.message || 'Import failed');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Import failed');
+      }
     } finally {
       setParsing(false);
     }

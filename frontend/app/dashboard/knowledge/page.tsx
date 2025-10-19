@@ -53,8 +53,12 @@ export default function KnowledgeBasePage() {
 
       setEntities(confirmedData.entities);
       setSummary(summaryData);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load knowledge base');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to load knowledge base');
+      }
     } finally {
       setLoading(false);
     }
@@ -90,8 +94,9 @@ export default function KnowledgeBasePage() {
         prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
       );
       showToast('Fact updated successfully', 'success');
-    } catch (err: any) {
-      showToast(`Failed to update: ${err.message}`, 'error');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      showToast(`Failed to update: ${message}`, 'error');
     }
   };
 
@@ -108,8 +113,9 @@ export default function KnowledgeBasePage() {
         setSummary(summaryData);
       }
       showToast('Fact deleted successfully', 'success');
-    } catch (err: any) {
-      showToast(`Failed to delete: ${err.message}`, 'error');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      showToast(`Failed to delete: ${message}`, 'error');
     }
   };
 
