@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import ResumeEditor from '@/components/ResumeEditor'
 import TruthCheckReview from '@/components/TruthCheckReview'
 import { API_URL } from '@/lib/config'
+import DOMPurify from 'dompurify'
 
 export default function ResumeDetailPage() {
   const params = useParams()
@@ -344,7 +345,7 @@ export default function ResumeDetailPage() {
         {activeTab === 'preview' && (
           <div className="p-6">
             <div className="bg-white rounded-lg shadow p-8">
-              <div dangerouslySetInnerHTML={{ __html: resume.html_content }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(resume.html_content) }} />
             </div>
           </div>
         )}
