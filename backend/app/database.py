@@ -1,20 +1,48 @@
 """Database connection and client setup"""
 
 from supabase import create_client, Client
+from tenacity import retry, stop_after_attempt, wait_exponential
 from dotenv import load_dotenv
+import logging
 import os
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
+# Validate required environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")  # For auth
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SECRET_KEY")  # For database
 
+required_vars = {
+    "SUPABASE_URL": SUPABASE_URL,
+    "SUPABASE_ANON_KEY": SUPABASE_ANON_KEY,
+    "SUPABASE_SECRET_KEY": SUPABASE_SERVICE_KEY
+}
+
+missing = [var for var, value in required_vars.items() if not value]
+if missing:
+    raise ValueError(f"Missing required environment variables: {missing}")
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def create_supabase_client(url: str, key: str, client_type: str) -> Client:
+    """Create Supabase client with connection validation and retry logic"""
+    try:
+        client = create_client(url, key)
+        # Validate connection with simple query
+        client.table("user_profiles").select("id").limit(1).execute()
+        logger.info(f"Supabase {client_type} connection established")
+        return client
+    except Exception as e:
+        logger.error(f"Failed to connect to Supabase ({client_type}): {e}")
+        raise
+
 # Auth client (for signup/login)
-supabase_auth: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+supabase_auth: Client = create_supabase_client(SUPABASE_URL, SUPABASE_ANON_KEY, "auth")
 
 # Admin client (for database operations, bypasses RLS)
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+supabase_admin: Client = create_supabase_client(SUPABASE_URL, SUPABASE_SERVICE_KEY, "admin")
 
 def get_supabase() -> Client:
     """Get Supabase admin client (bypasses RLS)"""
