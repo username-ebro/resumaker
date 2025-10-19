@@ -277,6 +277,7 @@ export default function ResumesPage() {
                           toggleStar(resume.id, resume.is_starred || false)
                         }}
                         className="text-2xl hover:scale-110 transition-transform"
+                        aria-label={resume.is_starred ? 'Remove star' : 'Star resume'}
                       >
                         {resume.is_starred ? '⭐' : '☆'}
                       </button>
@@ -337,12 +338,14 @@ export default function ResumesPage() {
                     <button
                       onClick={() => archiveResume(resume.id, resume.is_archived || false)}
                       className="brutal-btn brutal-shadow text-xs px-3 py-2"
+                      aria-label={resume.is_archived ? 'Unarchive resume' : 'Archive resume'}
                     >
                       {resume.is_archived ? 'Unarchive' : 'Archive'}
                     </button>
                     <button
                       onClick={() => deleteResume(resume.id)}
                       className="brutal-btn bg-red-50 border-2 border-red-600 hover:bg-red-100 text-xs px-3 py-2"
+                      aria-label="Delete resume"
                     >
                       Delete
                     </button>

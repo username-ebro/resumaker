@@ -179,6 +179,7 @@ export default function ConversationHistory({
               <button
                 onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
                 className={`brutal-btn ${isRecording ? 'bg-red-500 text-white border-red-500' : 'brutal-btn-seafoam'} brutal-shadow px-4 py-2`}
+                aria-label={isRecording ? 'Stop voice recording' : 'Start voice recording'}
               >
                 {isRecording ? (
                   <>

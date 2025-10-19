@@ -435,6 +435,7 @@ export default function ConversationInterface({ userId }: { userId: string }) {
             onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
             disabled={loading || transcribing}
             className={`brutal-btn ${isRecording ? 'bg-red-500 text-white border-red-500' : 'brutal-btn-primary'} brutal-shadow disabled:opacity-50 px-12 py-4 transition-all`}
+            aria-label={isRecording ? 'Stop recording voice input' : 'Start recording voice input'}
           >
             {transcribing ? (
               <>
