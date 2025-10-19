@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { Input, Button } from '@/components/ui';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -45,51 +45,35 @@ export default function LoginForm() {
         </div>
       )}
 
-      <div className="form-group">
-        <label htmlFor="email" className="form-label">Email Address</label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="form-input"
-          placeholder="you@example.com"
-          autoComplete="email"
-          required
-        />
-      </div>
+      <Input
+        label="Email Address"
+        type="email"
+        value={email}
+        onChange={setEmail}
+        placeholder="you@example.com"
+        autoComplete="email"
+        required
+      />
 
-      <div className="form-group">
-        <label htmlFor="password" className="form-label">Password</label>
-        <div className="password-input-wrapper">
-          <input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="form-input"
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="password-toggle"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            {showPassword ? '🙈' : '👁️'}
-          </button>
-        </div>
-      </div>
+      <Input
+        label="Password"
+        type="password"
+        value={password}
+        onChange={setPassword}
+        placeholder="Enter your password"
+        autoComplete="current-password"
+        required
+      />
 
-      <button
+      <Button
         type="submit"
-        disabled={loading}
-        className={`brutal-btn brutal-btn-primary brutal-shadow w-full ${loading ? 'btn-loading' : ''}`}
+        variant="primary"
+        size="lg"
+        loading={loading}
+        className="w-full"
       >
-        {loading ? 'Logging in...' : 'Login'}
-      </button>
+        Login
+      </Button>
     </form>
   );
 }

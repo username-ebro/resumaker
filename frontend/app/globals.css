@@ -321,3 +321,263 @@ button:focus {
 .space-y-8 > * + * {
   margin-top: var(--space-8);
 }
+
+/* ==========================================
+   PREMIUM ANIMATIONS & UX POLISH
+   ========================================== */
+
+/* ========== PAGE TRANSITIONS ========== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ========== CARD ENTRANCE ANIMATIONS ========== */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-enter {
+  opacity: 0;
+  animation: slideUp 0.4s ease-out;
+  animation-fill-mode: forwards;
+}
+
+.card-enter-1 { animation-delay: 0.05s; }
+.card-enter-2 { animation-delay: 0.1s; }
+.card-enter-3 { animation-delay: 0.15s; }
+.card-enter-4 { animation-delay: 0.2s; }
+.card-enter-5 { animation-delay: 0.25s; }
+.card-enter-6 { animation-delay: 0.3s; }
+
+/* ========== BUTTON MICRO-INTERACTIONS ========== */
+.brutal-btn {
+  transition: all 0.15s ease-out;
+}
+
+.brutal-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 0 var(--black);
+}
+
+.brutal-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 0 0 var(--black);
+}
+
+/* Primary variant specific hover */
+.brutal-btn.bg-black:hover:not(:disabled) {
+  background-color: #1a1a1a;
+}
+
+/* Icon bounce on hover */
+.brutal-btn:hover .btn-icon {
+  animation: iconBounce 0.5s ease;
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* ========== CARD HOVER EFFECTS ========== */
+.card-hover {
+  transition: all 0.2s ease-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 0 0 var(--black);
+}
+
+.card-hover:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 0 var(--black);
+}
+
+/* ========== INPUT FOCUS ANIMATIONS ========== */
+.form-input,
+.brutal-input {
+  transition: all 0.2s ease-out;
+}
+
+.form-input:focus,
+.brutal-input:focus {
+  border-color: var(--seafoam-solid);
+  box-shadow: 0 0 0 3px var(--seafoam);
+  transform: scale(1.01);
+}
+
+/* ========== LOADING SPINNER ANIMATION ========== */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.btn-loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* ========== TOAST SLIDE-IN ANIMATION ========== */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastSlideOut {
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.toast-enter {
+  animation: toastSlideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toast-exit {
+  animation: toastSlideOut 0.2s ease-in;
+}
+
+/* ========== SMOOTH SCROLL BEHAVIOR ========== */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+/* ========== BADGE PULSE ANIMATION ========== */
+@keyframes badgePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+.badge-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* ========== SKELETON LOADING SCREENS ========== */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #e0e0e0 20%,
+    #f0f0f0 40%,
+    #f0f0f0 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s linear infinite;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-card {
+  height: 200px;
+}
+
+/* ========== LINK UNDERLINE ANIMATION ========== */
+a:not(.nav-link):not(.brutal-btn) {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+a:not(.nav-link):not(.brutal-btn)::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--black);
+  transition: width 0.3s ease-out;
+}
+
+a:not(.nav-link):not(.brutal-btn):hover::after {
+  width: 100%;
+}
+
+/* ========== RESPECT REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .card-enter,
+  .toast-enter,
+  .toast-exit,
+  .skeleton {
+    animation: none;
+    opacity: 1;
+  }
+
+  .brutal-btn:hover:not(:disabled),
+  .card-hover:hover,
+  .form-input:focus,
+  .brutal-input:focus {
+    transform: none;
+  }
+
+  .brutal-btn:hover .btn-icon {
+    animation: none;
+  }
+
+  .badge-pulse {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  a:not(.nav-link):not(.brutal-btn)::after {
+    transition: none;
+  }
+
+  .btn-loading-spinner {
+    animation: none;
+    opacity: 0.5;
+  }
+}

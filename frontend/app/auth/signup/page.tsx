@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function SignupPage() {
   return (
-    <div className="auth-container">
+    <div className="auth-container page-enter">
       <div className="auth-card">
         <div className="auth-header">
           <h1 className="auth-logo">RESUMAKER</h1>

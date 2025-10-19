@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`brutal-box brutal-shadow p-4 min-w-[300px] animate-slide-in ${
+            className={`brutal-box brutal-shadow p-4 min-w-[300px] toast-enter ${
               toast.type === 'success' ? 'bg-green-100' :
               toast.type === 'error' ? 'bg-red-100' :
               'bg-blue-100'
