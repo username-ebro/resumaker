@@ -12,6 +12,9 @@ router = APIRouter(prefix="/upload", tags=["upload"])
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# File upload size limit (convert MB to bytes)
+MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10")) * 1024 * 1024
+
 @router.post("/resume")
 async def upload_resume(
     file: UploadFile = File(...),
@@ -44,6 +47,16 @@ async def upload_resume(
             detail="Invalid file type. Allowed: PDF, JPG, PNG, DOCX, DOC, TXT"
         )
 
+    # Read file content
+    content = await file.read()
+
+    # Validate file size
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size: {MAX_UPLOAD_SIZE / 1024 / 1024}MB"
+        )
+
     # Save file temporarily
     file_id = str(uuid.uuid4())
     file_ext = os.path.splitext(file.filename)[1]
@@ -51,7 +64,6 @@ async def upload_resume(
 
     try:
         with open(file_path, "wb") as f:
-            content = await file.read()
             f.write(content)
 
         # Extract data via OCR
