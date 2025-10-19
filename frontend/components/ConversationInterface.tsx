@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ConversationHistory from './ConversationHistory';
+import { useToast } from './Toast';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -11,6 +13,8 @@ type Message = {
 type InputMode = 'voice' | 'text';
 
 export default function ConversationInterface({ userId }: { userId: string }) {
+  const router = useRouter();
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [userInput, setUserInput] = useState('');
@@ -147,7 +151,7 @@ export default function ConversationInterface({ userId }: { userId: string }) {
       setIsRecording(true);
     } catch (err) {
       console.error('Microphone access denied:', err);
-      alert('Please allow microphone access to use voice input');
+      showToast('Please allow microphone access to use voice input', 'error');
     }
   };
 
@@ -208,7 +212,7 @@ export default function ConversationInterface({ userId }: { userId: string }) {
       }
     } catch (err) {
       console.error('Transcription failed:', err);
-      alert('Failed to transcribe audio. Please try again or use text input.');
+      showToast('Failed to transcribe audio. Please try again or use text input.', 'error');
     } finally {
       setTranscribing(false);
     }
@@ -235,11 +239,11 @@ export default function ConversationInterface({ userId }: { userId: string }) {
 
       if (data.success) {
         // Redirect to confirmation screen
-        window.location.href = '/dashboard/knowledge/confirm';
+        router.push('/dashboard/knowledge/confirm');
       }
     } catch (err) {
       console.error('Error ending conversation:', err);
-      alert('Failed to process conversation. Please try again.');
+      showToast('Failed to process conversation. Please try again.', 'error');
     } finally {
       setEndingConversation(false);
     }
