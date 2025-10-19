@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useToast } from './Toast';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -18,6 +19,7 @@ export default function ConversationHistory({
   onAddMore,
   onEdit
 }: ConversationHistoryProps) {
+  const { showToast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editInstructions, setEditInstructions] = useState('');
@@ -33,7 +35,7 @@ export default function ConversationHistory({
       .join('\n\n');
 
     navigator.clipboard.writeText(transcript);
-    alert('Conversation copied to clipboard!');
+    showToast('Conversation copied to clipboard!', 'success');
   };
 
   const startVoiceRecording = async () => {
@@ -59,7 +61,7 @@ export default function ConversationHistory({
       setIsRecording(true);
     } catch (err) {
       console.error('Microphone access denied:', err);
-      alert('Please allow microphone access to use voice input');
+      showToast('Please allow microphone access to use voice input', 'error');
     }
   };
 
@@ -88,7 +90,7 @@ export default function ConversationHistory({
       }
     } catch (err) {
       console.error('Transcription failed:', err);
-      alert('Failed to transcribe audio. Please try typing instead.');
+      showToast('Failed to transcribe audio. Please try typing instead.', 'error');
     }
   };
 

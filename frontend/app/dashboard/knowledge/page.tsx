@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { knowledgeApi, KnowledgeEntity } from '@/lib/api/knowledge';
 import FactCard from '@/components/FactCard';
+import { useToast } from '@/components/Toast';
 
 export default function KnowledgeBasePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [entities, setEntities] = useState<KnowledgeEntity[]>([]);
@@ -87,8 +89,9 @@ export default function KnowledgeBasePage() {
       setEntities((prev) =>
         prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
       );
+      showToast('Fact updated successfully', 'success');
     } catch (err: any) {
-      alert(`Failed to update: ${err.message}`);
+      showToast(`Failed to update: ${err.message}`, 'error');
     }
   };
 
@@ -104,8 +107,9 @@ export default function KnowledgeBasePage() {
         const summaryData = await knowledgeApi.getSummary(user.id);
         setSummary(summaryData);
       }
+      showToast('Fact deleted successfully', 'success');
     } catch (err: any) {
-      alert(`Failed to delete: ${err.message}`);
+      showToast(`Failed to delete: ${err.message}`, 'error');
     }
   };
 

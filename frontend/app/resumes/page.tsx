@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { API_URL } from '@/lib/config'
+import { useToast } from '@/components/Toast'
 
 interface Resume {
   id: string
@@ -19,6 +20,7 @@ interface Resume {
 }
 
 export default function ResumesPage() {
+  const { showToast } = useToast()
   const [user, setUser] = useState<any>(null)
   const [resumes, setResumes] = useState<Resume[]>([])
   const [loading, setLoading] = useState(true)
@@ -77,11 +79,11 @@ export default function ResumesPage() {
         // Navigate to the new resume
         router.push(`/resumes/${data.resume_version_id}`)
       } else {
-        alert('Failed to generate resume: ' + (data.error || 'Unknown error'))
+        showToast('Failed to generate resume: ' + (data.error || 'Unknown error'), 'error')
       }
     } catch (error) {
       console.error('Failed to generate resume:', error)
-      alert('Failed to generate resume')
+      showToast('Failed to generate resume', 'error')
     } finally {
       setGenerating(false)
     }
@@ -153,7 +155,7 @@ export default function ResumesPage() {
       }
     } catch (error) {
       console.error('Failed to delete resume:', error)
-      alert('Failed to delete resume')
+      showToast('Failed to delete resume', 'error')
     }
   }
 

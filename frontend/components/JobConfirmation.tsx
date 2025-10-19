@@ -19,11 +19,13 @@ interface JobData {
   };
 }
 
+type JobFieldValue = string | string[] | JobData['company_info'];
+
 interface JobConfirmationProps {
   jobData: JobData;
   onConfirm: (confirmedData: JobData) => void;
   onCancel: () => void;
-  onEdit: (field: string, value: any) => void;
+  onEdit: (field: string, value: JobFieldValue) => void;
   loading?: boolean;
 }
 
@@ -38,7 +40,7 @@ export default function JobConfirmation({
   const [editValue, setEditValue] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const startEdit = (field: string, currentValue: any) => {
+  const startEdit = (field: string, currentValue: JobFieldValue) => {
     setIsEditing(field);
     setEditValue(typeof currentValue === 'string' ? currentValue : JSON.stringify(currentValue));
   };

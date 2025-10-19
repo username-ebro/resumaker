@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useToast } from './Toast'
 
 interface ContactInfo {
   name: string
@@ -20,13 +21,29 @@ interface Experience {
   bullets: string[]
 }
 
+interface Education {
+  degree: string
+  institution: string
+  location?: string
+  graduation_date?: string
+  gpa?: string
+}
+
+interface Certification {
+  name: string
+  issuer: string
+  date_earned?: string
+  expiration_date?: string
+  credential_id?: string
+}
+
 interface ResumeStructure {
   contact_info: ContactInfo
   summary: string
   experience: Experience[]
   skills: { [key: string]: string[] }
-  education: any[]
-  certifications: any[]
+  education: Education[]
+  certifications: Certification[]
   optimization_report?: {
     ats_score: number
     improvements_made: string[]
@@ -42,6 +59,7 @@ interface ResumeEditorProps {
 }
 
 export default function ResumeEditor({ resumeId, initialData, onSave }: ResumeEditorProps) {
+  const { showToast } = useToast()
   const [resume, setResume] = useState<ResumeStructure | null>(initialData || null)
   const [isSaving, setIsSaving] = useState(false)
   const [activeSection, setActiveSection] = useState<string>('summary')
@@ -60,9 +78,9 @@ export default function ResumeEditor({ resumeId, initialData, onSave }: ResumeEd
     setIsSaving(true)
     try {
       await onSave(resume)
-      alert('Resume saved successfully!')
+      showToast('Resume saved successfully!', 'success')
     } catch (error) {
-      alert('Failed to save resume')
+      showToast('Failed to save resume', 'error')
     } finally {
       setIsSaving(false)
     }
@@ -72,7 +90,7 @@ export default function ResumeEditor({ resumeId, initialData, onSave }: ResumeEd
     setResume({ ...resume, summary: value })
   }
 
-  const updateExperience = (index: number, field: string, value: any) => {
+  const updateExperience = (index: number, field: keyof Experience, value: string | string[]) => {
     const newExperience = [...resume.experience]
     newExperience[index] = { ...newExperience[index], [field]: value }
     setResume({ ...resume, experience: newExperience })

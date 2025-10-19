@@ -3,20 +3,44 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { User } from '@supabase/supabase-js'
 import ResumeEditor from '@/components/ResumeEditor'
 import TruthCheckReview from '@/components/TruthCheckReview'
 import { API_URL } from '@/lib/config'
 import DOMPurify from 'dompurify'
+import { useToast } from '@/components/Toast'
+
+interface Resume {
+  id: string
+  user_id: string
+  content: string
+  ats_score: number
+  job_id?: string
+  is_starred: boolean
+  is_archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+interface Flag {
+  id: string
+  resume_id: string
+  claim_text: string
+  severity: string
+  resolution_notes?: string
+  resolved_at?: string
+}
 
 export default function ResumeDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { showToast } = useToast()
   const resumeId = params.id as string
 
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [activeTab, setActiveTab] = useState<'edit' | 'review' | 'preview'>('edit')
-  const [resume, setResume] = useState<any>(null)
-  const [flags, setFlags] = useState<any[]>([])
+  const [resume, setResume] = useState<Resume | null>(null)
+  const [flags, setFlags] = useState<Flag[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -54,7 +78,7 @@ export default function ResumeDetailPage() {
     }
   }
 
-  const handleSave = async (updatedResume: any) => {
+  const handleSave = async (updatedResume: Record<string, unknown>) => {
     if (!user) return
 
     const res = await fetch(`${API_URL}/resumes/${resumeId}?user_id=${user.id}`, {
@@ -99,13 +123,13 @@ export default function ResumeDetailPage() {
       const data = await res.json()
 
       if (data.success) {
-        alert('Resume finalized successfully!')
+        showToast('Resume finalized successfully!', 'success')
         await fetchResume(user.id)
       } else {
-        alert(data.error || 'Failed to finalize resume')
+        showToast(data.error || 'Failed to finalize resume', 'error')
       }
     } catch (error) {
-      alert('Failed to finalize resume')
+      showToast('Failed to finalize resume', 'error')
     }
   }
 
@@ -126,8 +150,9 @@ export default function ResumeDetailPage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      showToast('HTML exported successfully', 'success')
     } catch (error) {
-      alert('Failed to export resume')
+      showToast('Failed to export resume', 'error')
     }
   }
 
@@ -159,8 +184,9 @@ export default function ResumeDetailPage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      showToast('PDF exported successfully', 'success')
     } catch (error) {
-      alert('Failed to export PDF')
+      showToast('Failed to export PDF', 'error')
     }
   }
 
@@ -192,8 +218,9 @@ export default function ResumeDetailPage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      showToast('DOCX exported successfully', 'success')
     } catch (error) {
-      alert('Failed to export DOCX')
+      showToast('Failed to export DOCX', 'error')
     }
   }
 

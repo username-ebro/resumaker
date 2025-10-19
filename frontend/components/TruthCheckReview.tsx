@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useToast } from './Toast'
 
 interface Flag {
   id: string
@@ -21,6 +22,7 @@ interface TruthCheckReviewProps {
 }
 
 export default function TruthCheckReview({ flags, onResolveFlag }: TruthCheckReviewProps) {
+  const { showToast } = useToast()
   const [resolving, setResolving] = useState<string | null>(null)
   const [resolutionNotes, setResolutionNotes] = useState<{ [key: string]: string }>({})
   const [filter, setFilter] = useState<'all' | 'unresolved' | 'high' | 'medium' | 'low'>('unresolved')
@@ -46,7 +48,7 @@ export default function TruthCheckReview({ flags, onResolveFlag }: TruthCheckRev
   const handleResolve = async (flagId: string) => {
     const notes = resolutionNotes[flagId]
     if (!notes || notes.trim() === '') {
-      alert('Please add resolution notes')
+      showToast('Please add resolution notes', 'error')
       return
     }
 
@@ -54,8 +56,9 @@ export default function TruthCheckReview({ flags, onResolveFlag }: TruthCheckRev
     try {
       await onResolveFlag(flagId, notes)
       setResolutionNotes({ ...resolutionNotes, [flagId]: '' })
+      showToast('Flag resolved successfully', 'success')
     } catch (error) {
-      alert('Failed to resolve flag')
+      showToast('Failed to resolve flag', 'error')
     } finally {
       setResolving(null)
     }

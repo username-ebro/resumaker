@@ -41,23 +41,17 @@ export default function UploadResume() {
 
       const data = await response.json();
 
-      console.log('Upload response:', data);
-
       if (data.success) {
         setResult(data);
 
         // Check knowledge extraction status
         if (data.knowledge_extraction) {
-          console.log('Knowledge extraction result:', data.knowledge_extraction);
-
           if (data.knowledge_extraction.success) {
-            console.log(`✅ Extracted ${data.knowledge_extraction.entities_extracted} entities`);
+            // Knowledge extraction successful
           } else {
-            console.log('❌ Knowledge extraction failed:', data.knowledge_extraction.error);
             setError(`Knowledge extraction failed: ${data.knowledge_extraction.error}`);
           }
         } else {
-          console.log('⚠️ No knowledge extraction in response (user_id missing?)');
           setError('Knowledge extraction skipped - make sure you are logged in');
         }
 
@@ -70,8 +64,12 @@ export default function UploadResume() {
       } else {
         setError('Upload failed');
       }
-    } catch (err: any) {
-      setError(err.message || 'Upload failed');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Upload failed');
+      }
     } finally {
       setUploading(false);
     }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { knowledgeApi, KnowledgeEntity, GroupedEntities } from '@/lib/api/knowledge';
 import FactCard from './FactCard';
+import { useToast } from './Toast';
 
 interface ConfirmationScreenProps {
   userId: string;
@@ -11,6 +12,7 @@ interface ConfirmationScreenProps {
 
 export default function ConfirmationScreen({ userId }: ConfirmationScreenProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -31,8 +33,12 @@ export default function ConfirmationScreen({ userId }: ConfirmationScreenProps) 
       const data = await knowledgeApi.getPending(userId);
       setEntities(data.entities);
       setGroupedEntities(data.grouped_by_type);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load entities');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to load entities');
+      }
     } finally {
       setLoading(false);
     }
@@ -73,8 +79,10 @@ export default function ConfirmationScreen({ userId }: ConfirmationScreenProps) 
         });
         return newGrouped;
       });
-    } catch (err: any) {
-      alert(`Failed to update: ${err.message}`);
+      showToast('Fact updated successfully', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      showToast(`Failed to update: ${message}`, 'error');
     }
   };
 
@@ -100,14 +108,16 @@ export default function ConfirmationScreen({ userId }: ConfirmationScreenProps) 
         newSet.delete(id);
         return newSet;
       });
-    } catch (err: any) {
-      alert(`Failed to delete: ${err.message}`);
+      showToast('Fact deleted successfully', 'success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      showToast(`Failed to delete: ${message}`, 'error');
     }
   };
 
   const handleSaveAndContinue = async () => {
     if (confirmedIds.size === 0) {
-      alert('Please confirm at least one fact before continuing');
+      showToast('Please confirm at least one fact before continuing', 'error');
       return;
     }
 
@@ -116,8 +126,9 @@ export default function ConfirmationScreen({ userId }: ConfirmationScreenProps) 
     try {
       await knowledgeApi.confirm(userId, Array.from(confirmedIds));
       router.push('/dashboard');
-    } catch (err: any) {
-      alert(`Failed to save: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      showToast(`Failed to save: ${message}`, 'error');
     } finally {
       setSaving(false);
     }

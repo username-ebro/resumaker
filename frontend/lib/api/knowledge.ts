@@ -30,9 +30,17 @@ export interface PendingResponse {
   total_pending: number;
 }
 
+interface Relationship {
+  id: string;
+  source_entity_id: string;
+  target_entity_id: string;
+  relationship_type: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface ConfirmedResponse {
   entities: KnowledgeEntity[];
-  relationships: any[];
+  relationships: Relationship[];
   summary: {
     total: number;
     by_type: Record<string, number>;

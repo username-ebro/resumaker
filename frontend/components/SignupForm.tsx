@@ -31,8 +31,12 @@ export default function SignupForm() {
       if (error) throw error;
 
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Signup failed');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Signup failed');
+      }
     } finally {
       setLoading(false);
     }
