@@ -1,12 +1,15 @@
 """File upload and OCR routes"""
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from app.services.ocr_service import ocr_service
 from app.services.knowledge_extraction_service import knowledge_extraction_service
 from app.services.knowledge_graph_service import knowledge_graph_service
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import os
 import uuid
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/upload", tags=["upload"])
 
 UPLOAD_DIR = "uploads"
@@ -16,7 +19,9 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10")) * 1024 * 1024
 
 @router.post("/resume")
+@limiter.limit("5/minute")
 async def upload_resume(
+    http_request: Request,
     file: UploadFile = File(...),
     user_id: str = Form(None)
 ):

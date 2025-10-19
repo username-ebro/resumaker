@@ -18,8 +18,14 @@ import os
 # Import routers
 from app.routers import auth, upload, imports, conversation, references, resumes, jobs, knowledge
 
+# Import logging configuration
+from app.logging_config import setup_logging
+
 # Load environment variables
 load_dotenv()
+
+# Initialize logging
+logger = setup_logging()
 
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -116,6 +122,7 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("Starting Resumaker API server")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

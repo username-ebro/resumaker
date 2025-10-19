@@ -1,15 +1,18 @@
 """Conversation routes"""
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 from app.services.conversation_service import conversation_service
 from app.services.transcription_service import transcription_service
 from app.services.knowledge_extraction_service import knowledge_extraction_service
 from app.services.knowledge_graph_service import knowledge_graph_service
 from app.utils.user_utils import ensure_user_profile
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import os
 import uuid
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/conversation", tags=["conversation"])
 
 TEMP_AUDIO_DIR = "temp_audio"
@@ -29,7 +32,8 @@ class ConversationEndRequest(BaseModel):
     conversation_history: list
 
 @router.post("/start")
-async def start_conversation(request: ConversationStartRequest):
+@limiter.limit("5/minute")
+async def start_conversation(request: ConversationStartRequest, http_request: Request):
     """Start a new AI conversation for resume building"""
 
     try:
@@ -46,7 +50,8 @@ async def start_conversation(request: ConversationStartRequest):
         raise HTTPException(status_code=500, detail=f"Failed to start conversation: {str(e)}")
 
 @router.post("/continue")
-async def continue_conversation(request: ConversationContinueRequest):
+@limiter.limit("10/minute")
+async def continue_conversation(request: ConversationContinueRequest, http_request: Request):
     """Continue the conversation and extract knowledge"""
 
     try:
@@ -64,7 +69,8 @@ async def continue_conversation(request: ConversationContinueRequest):
         raise HTTPException(status_code=500, detail=f"Conversation error: {str(e)}")
 
 @router.post("/transcribe")
-async def transcribe_audio(audio: UploadFile = File(...)):
+@limiter.limit("10/minute")
+async def transcribe_audio(http_request: Request, audio: UploadFile = File(...)):
     """Transcribe audio file to text using Gemini"""
 
     # Save audio temporarily
