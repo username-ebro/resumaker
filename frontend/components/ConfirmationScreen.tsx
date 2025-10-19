@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { knowledgeApi, KnowledgeEntity, GroupedEntities } from '@/lib/api/knowledge';
 import FactCard from './FactCard';
 import { useToast } from './Toast';
+import { LoadingSpinner } from './LoadingSpinner';
 
 interface ConfirmationScreenProps {
   userId: string;
@@ -147,8 +148,7 @@ export default function ConfirmationScreen({ userId }: ConfirmationScreenProps) 
   if (loading) {
     return (
       <div className="brutal-box brutal-shadow p-12 text-center">
-        <div className="cool-spinner h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-sm font-bold uppercase">Loading your facts...</p>
+        <LoadingSpinner message="Loading your facts..." />
       </div>
     );
   }

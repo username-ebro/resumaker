@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { knowledgeApi, KnowledgeEntity } from '@/lib/api/knowledge';
 import FactCard from '@/components/FactCard';
 import { useToast } from '@/components/Toast';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function KnowledgeBasePage() {
   const router = useRouter();
@@ -132,10 +133,7 @@ export default function KnowledgeBasePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="brutal-box brutal-shadow p-12 text-center">
-          <div className="cool-spinner h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-sm font-bold uppercase">Loading knowledge base...</p>
-        </div>
+        <LoadingSpinner message="Loading knowledge base..." />
       </div>
     );
   }
