@@ -3,13 +3,16 @@ Resumaker Backend - FastAPI Application
 Main entry point for the API server
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
 from datetime import datetime
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import os
 
 # Import routers
@@ -17,6 +20,9 @@ from app.routers import auth, upload, imports, conversation, references, resumes
 
 # Load environment variables
 load_dotenv()
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Security Headers Middleware
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -35,6 +41,10 @@ app = FastAPI(
     description="AI-powered resume builder with truth verification",
     version="1.0.0"
 )
+
+# Attach limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Get CORS origins from environment variable
 ALLOWED_ORIGINS = os.getenv(
