@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useToast } from './Toast';
 
 interface JobData {
   title: string;
@@ -36,6 +37,7 @@ export default function JobConfirmation({
   onEdit,
   loading = false
 }: JobConfirmationProps) {
+  const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +57,43 @@ export default function JobConfirmation({
     }
   };
 
+  const validateJobData = (): boolean => {
+    // Validate job title
+    if (!jobData.title || jobData.title.trim().length < 3) {
+      showToast('Job title must be at least 3 characters', 'error');
+      return false;
+    }
+
+    // Validate company if provided
+    if (jobData.company && jobData.company.trim().length < 2) {
+      showToast('Company name must be at least 2 characters', 'error');
+      return false;
+    }
+
+    // Validate description
+    if (!jobData.description || jobData.description.trim().length < 10) {
+      showToast('Job description must be at least 10 characters', 'error');
+      return false;
+    }
+
+    // Validate URL if provided
+    if (jobData.url && !jobData.url.match(/^https?:\/\/.+/)) {
+      showToast('Please enter a valid URL (starting with http:// or https://)', 'error');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleConfirm = () => {
     try {
       setError(null);
+
+      // Validate before confirming
+      if (!validateJobData()) {
+        return;
+      }
+
       onConfirm(jobData);
     } catch (err) {
       setError('Failed to confirm. Please try again.');

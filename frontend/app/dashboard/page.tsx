@@ -81,6 +81,11 @@ export default function DashboardPage() {
   };
 
   const handleAnalyzeJob = async () => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
     if (!jobDescription.trim()) {
       setError('Please enter a job description');
       return;
@@ -150,6 +155,11 @@ export default function DashboardPage() {
   };
 
   const handleJobConfirm = async (confirmedData: JobData) => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
     setGeneratingResume(true);
     setError(null);
 
