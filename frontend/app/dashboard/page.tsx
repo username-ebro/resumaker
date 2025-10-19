@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import UploadResume from '@/components/UploadResume';
@@ -8,10 +8,28 @@ import ImportConversation from '@/components/ImportConversation';
 import ConversationInterface from '@/components/ConversationInterface';
 import JobConfirmation from '@/components/JobConfirmation';
 import GenericResumeGenerator from '@/components/GenericResumeGenerator';
-import { knowledgeApi } from '@/lib/api/knowledge';
+import { knowledgeApi, SummaryResponse } from '@/lib/api/knowledge';
+import { User } from '@supabase/supabase-js';
+
+interface JobData {
+  title: string;
+  company?: string;
+  location?: string;
+  url?: string;
+  description: string;
+  requirements?: string[];
+  keywords?: string[];
+  ats_system?: string;
+  company_info?: {
+    website?: string;
+    linkedin?: string;
+    values?: string[];
+    about?: string;
+  };
+}
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'conversation' | 'upload' | 'import' | 'generate'>('conversation');
   const [pendingCount, setPendingCount] = useState(0);
@@ -22,41 +40,40 @@ export default function DashboardPage() {
   const [jobTitle, setJobTitle] = useState('');
   const [jobUrl, setJobUrl] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [jobData, setJobData] = useState<any>(null); // Parsed job data
+  const [jobData, setJobData] = useState<JobData | null>(null);
   const [showJobConfirmation, setShowJobConfirmation] = useState(false);
   const [resumeType, setResumeType] = useState<'job-specific' | 'generic'>('job-specific');
   const [error, setError] = useState<string | null>(null);
   const [confirmedCount, setConfirmedCount] = useState(0);
-  const [knowledgeSummary, setKnowledgeSummary] = useState<any>(null);
+  const [knowledgeSummary, setKnowledgeSummary] = useState<SummaryResponse | null>(null);
 
   const router = useRouter();
 
+  const checkUser = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    setUser(user);
+    setLoading(false);
+
+    // Fetch pending facts count (only once on mount)
+    try {
+      const summary = await knowledgeApi.getSummary(user.id);
+      setPendingCount(summary.pending || 0);
+      setConfirmedCount(summary.confirmed || 0);
+      setKnowledgeSummary(summary);
+    } catch (err) {
+      console.error('Failed to fetch pending count:', err);
+    }
+  }, [router]);
+
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push('/auth/login');
-        return;
-      }
-
-      setUser(user);
-      setLoading(false);
-
-      // Fetch pending facts count (only once on mount)
-      try {
-        const summary = await knowledgeApi.getSummary(user.id);
-        setPendingCount(summary.pending || 0);
-        setConfirmedCount(summary.confirmed || 0);
-        setKnowledgeSummary(summary);
-      } catch (err) {
-        console.error('Failed to fetch pending count:', err);
-      }
-    };
-
     checkUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [checkUser]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -116,11 +133,14 @@ export default function DashboardPage() {
     }
   };
 
-  const handleJobEdit = (field: string, value: any) => {
-    setJobData((prev: any) => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleJobEdit = (field: string, value: string | string[] | JobData['company_info']) => {
+    setJobData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
   };
 
   const handleJobCancel = () => {
@@ -129,7 +149,7 @@ export default function DashboardPage() {
     setError(null);
   };
 
-  const handleJobConfirm = async (confirmedData: any) => {
+  const handleJobConfirm = async (confirmedData: JobData) => {
     setGeneratingResume(true);
     setError(null);
 
