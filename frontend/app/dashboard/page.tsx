@@ -237,14 +237,23 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <nav className="brutal-box border-b-2 border-black">
+    <div className="min-h-screen bg-gray-50">
+      <nav className="brutal-box border-b-4 border-black bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-          <h1 className="text-2xl">RESUMAKER</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-black tracking-tight">RESUMAKER</h1>
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Dashboard</span>
+          </div>
           <div className="flex items-center gap-4">
             <button
+              onClick={() => router.push('/resumes')}
+              className="brutal-btn brutal-btn-seafoam brutal-shadow text-sm"
+            >
+              📄 My Resumes
+            </button>
+            <button
               onClick={() => router.push('/dashboard/knowledge')}
-              className="brutal-btn brutal-btn-seafoam brutal-shadow relative"
+              className="brutal-btn brutal-btn-seafoam brutal-shadow relative text-sm"
             >
               📚 Knowledge Base
               {pendingCount > 0 && (
@@ -255,7 +264,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={handleLogout}
-              className="brutal-btn brutal-btn-seafoam brutal-shadow"
+              className="brutal-btn brutal-shadow text-sm"
             >
               Logout
             </button>
@@ -263,72 +272,96 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="brutal-box-seafoam brutal-shadow-seafoam p-6 mb-8">
-          <h2 className="text-xl">Welcome, {user?.email?.split('@')[0]}</h2>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="brutal-box-seafoam brutal-shadow-seafoam p-8 mb-8">
+          <h2 className="text-2xl mb-2">Welcome back, {user?.email?.split('@')[0]}!</h2>
+          <p className="text-sm text-gray-700">Let's build your next winning resume</p>
         </div>
 
-        <div className="mb-8">
-          {/* Pending facts alert */}
-          {pendingCount > 0 && (
-            <div className="brutal-box bg-yellow-50 border-yellow-600 p-4 mb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-bold uppercase mb-1">⚠ {pendingCount} Facts Pending Review</p>
-                  <p className="text-xs">
-                    Review and confirm the facts I extracted from your conversation
-                  </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Main content area - 2 columns on large screens */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Pending facts alert */}
+            {pendingCount > 0 && (
+              <div className="brutal-box bg-yellow-50 border-yellow-600 border-3 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-sm font-bold uppercase mb-2">⚠ {pendingCount} Facts Pending Review</p>
+                    <p className="text-sm text-gray-700">
+                      Review and confirm the facts I extracted from your conversation
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => router.push('/dashboard/knowledge/confirm')}
+                    className="brutal-btn brutal-btn-primary brutal-shadow text-sm"
+                  >
+                    Review Now
+                  </button>
                 </div>
+              </div>
+            )}
+
+            <div className="brutal-box-seafoam brutal-shadow-seafoam p-6">
+              <h3 className="text-lg font-bold uppercase mb-2">Build Your Knowledge Base</h3>
+              <p className="text-sm text-gray-700 mb-6">Add your experience through conversation, uploads, or imports</p>
+
+              <div className="grid grid-cols-3 gap-3">
                 <button
-                  onClick={() => router.push('/dashboard/knowledge/confirm')}
-                  className="brutal-btn brutal-btn-primary brutal-shadow"
+                  onClick={() => setActiveTab('conversation')}
+                  className={`brutal-btn ${
+                    activeTab === 'conversation' ? 'brutal-btn-primary' : 'brutal-btn-seafoam'
+                  } brutal-shadow text-sm py-4`}
                 >
-                  Review Now
+                  💬<br/>Conversation
+                </button>
+                <button
+                  onClick={() => setActiveTab('upload')}
+                  className={`brutal-btn ${
+                    activeTab === 'upload' ? 'brutal-btn-primary' : 'brutal-btn-seafoam'
+                  } brutal-shadow text-sm py-4`}
+                >
+                  📄<br/>Upload
+                </button>
+                <button
+                  onClick={() => setActiveTab('import')}
+                  className={`brutal-btn ${
+                    activeTab === 'import' ? 'brutal-btn-primary' : 'brutal-btn-seafoam'
+                  } brutal-shadow text-sm py-4`}
+                >
+                  📋<br/>Import
                 </button>
               </div>
             </div>
-          )}
-
-          <div className="brutal-box-seafoam brutal-shadow-seafoam p-4 mb-4">
-            <p className="text-sm font-bold uppercase">Build Your Knowledge Base</p>
-            <p className="text-xs mt-1">Add your experience through conversation, uploads, or imports</p>
           </div>
 
-          <div className="flex gap-4 mb-8">
-            <button
-              onClick={() => setActiveTab('conversation')}
-              className={`brutal-btn ${
-                activeTab === 'conversation' ? 'brutal-btn-primary' : 'brutal-btn-seafoam'
-              } brutal-shadow`}
-            >
-              💬 Conversation
-            </button>
-            <button
-              onClick={() => setActiveTab('upload')}
-              className={`brutal-btn ${
-                activeTab === 'upload' ? 'brutal-btn-primary' : 'brutal-btn-seafoam'
-              } brutal-shadow`}
-            >
-              📄 Upload
-            </button>
-            <button
-              onClick={() => setActiveTab('import')}
-              className={`brutal-btn ${
-                activeTab === 'import' ? 'brutal-btn-primary' : 'brutal-btn-seafoam'
-              } brutal-shadow`}
-            >
-              📋 Import
-            </button>
-          </div>
+          {/* Sidebar - 1 column on large screens */}
+          <div className="space-y-6">
+            <div className="brutal-box brutal-shadow bg-gradient-to-br from-black to-gray-800 text-white p-6 text-center">
+              <p className="text-sm font-bold mb-3 uppercase tracking-wide">Ready to Apply?</p>
+              <button
+                onClick={() => setActiveTab('generate')}
+                className="brutal-btn bg-white text-black border-white hover:bg-gray-100 brutal-shadow w-full"
+              >
+                ✨ Generate Resume
+              </button>
+            </div>
 
-          <div className="brutal-box brutal-shadow border-dashed p-6 mb-8 text-center">
-            <p className="text-sm font-bold mb-3">Ready to apply for a job?</p>
-            <button
-              onClick={() => setActiveTab('generate')}
-              className="brutal-btn brutal-btn-primary brutal-shadow"
-            >
-              ✨ Generate Resume
-            </button>
+            {/* Knowledge base stats */}
+            {knowledgeSummary && (
+              <div className="brutal-box brutal-shadow p-6">
+                <h4 className="text-xs font-bold uppercase mb-4 text-gray-600">Knowledge Base</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Confirmed</span>
+                    <span className="text-xl font-bold">{confirmedCount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Pending</span>
+                    <span className="text-xl font-bold text-yellow-600">{pendingCount}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -37,39 +38,55 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleLogin} className="space-y-4">
+    <form onSubmit={handleLogin} className="space-y-6">
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600">
-          {error}
+        <div className="form-error">
+          <strong>Error:</strong> {error}
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium mb-2">Email</label>
+      <div className="form-group">
+        <label htmlFor="email" className="form-label">Email Address</label>
         <input
+          id="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="form-input"
+          placeholder="you@example.com"
+          autoComplete="email"
           required
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-2">Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-          required
-        />
+      <div className="form-group">
+        <label htmlFor="password" className="form-label">Password</label>
+        <div className="password-input-wrapper">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="form-input"
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="password-toggle"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? '🙈' : '👁️'}
+          </button>
+        </div>
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        className={`brutal-btn brutal-btn-primary brutal-shadow w-full ${loading ? 'btn-loading' : ''}`}
       >
         {loading ? 'Logging in...' : 'Login'}
       </button>

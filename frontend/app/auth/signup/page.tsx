@@ -1,17 +1,25 @@
 import SignupForm from '@/components/SignupForm';
+import Link from 'next/link';
 
 export default function SignupPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow">
-        <h1 className="text-2xl font-bold mb-6">Create Account</h1>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1 className="auth-logo">RESUMAKER</h1>
+          <p className="auth-tagline">Start Building Your Future</p>
+        </div>
+
         <SignupForm />
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{' '}
-          <a href="/auth/login" className="text-blue-600 hover:underline">
-            Login
-          </a>
-        </p>
+
+        <div className="text-center mt-8">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link href="/auth/login" className="auth-link">
+              Login
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
