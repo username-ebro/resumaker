@@ -17,7 +17,7 @@ def setup_logging() -> logging.Logger:
     Returns:
         Logger instance configured with both console and file handlers
     """
-    log_level = os.getenv("LOG_LEVEL", "INFO")
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 
     # Create logs directory if it doesn't exist
     logs_dir = Path("logs")

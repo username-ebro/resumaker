@@ -33,14 +33,14 @@ class ConversationEndRequest(BaseModel):
 
 @router.post("/start")
 @limiter.limit("5/minute")
-async def start_conversation(request: ConversationStartRequest, http_request: Request):
+async def start_conversation(conversation_request: ConversationStartRequest, request: Request):
     """Start a new AI conversation for resume building"""
 
     try:
         # Ensure user profile exists
-        await ensure_user_profile(request.user_id)
+        await ensure_user_profile(conversation_request.user_id)
 
-        result = await conversation_service.start_conversation(request.user_id)
+        result = await conversation_service.start_conversation(conversation_request.user_id)
         return {
             "success": True,
             **result
@@ -51,13 +51,13 @@ async def start_conversation(request: ConversationStartRequest, http_request: Re
 
 @router.post("/continue")
 @limiter.limit("10/minute")
-async def continue_conversation(request: ConversationContinueRequest, http_request: Request):
+async def continue_conversation(conversation_request: ConversationContinueRequest, request: Request):
     """Continue the conversation and extract knowledge"""
 
     try:
         result = await conversation_service.continue_conversation(
-            request.conversation_history,
-            request.user_response
+            conversation_request.conversation_history,
+            conversation_request.user_response
         )
 
         return {
@@ -70,7 +70,7 @@ async def continue_conversation(request: ConversationContinueRequest, http_reque
 
 @router.post("/transcribe")
 @limiter.limit("10/minute")
-async def transcribe_audio(http_request: Request, audio: UploadFile = File(...)):
+async def transcribe_audio(request: Request, audio: UploadFile = File(...)):
     """Transcribe audio file to text using Gemini"""
 
     # Save audio temporarily

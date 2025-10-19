@@ -21,7 +21,7 @@ MAX_UPLOAD_SIZE = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10")) * 1024 * 1024
 @router.post("/resume")
 @limiter.limit("5/minute")
 async def upload_resume(
-    http_request: Request,
+    request: Request,
     file: UploadFile = File(...),
     user_id: str = Form(None)
 ):
