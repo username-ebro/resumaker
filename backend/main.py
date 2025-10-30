@@ -27,6 +27,41 @@ load_dotenv()
 # Initialize logging
 logger = setup_logging()
 
+# ============================================================================
+# ENVIRONMENT VALIDATION - RUN BEFORE ANYTHING ELSE
+# ============================================================================
+REQUIRED_ENV_VARS = [
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SECRET_KEY",
+    "CLAUDE_API_KEY",
+    "GEMINI_API_KEY",
+]
+
+missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
+
+if missing_vars:
+    error_msg = f"""
+{'=' * 70}
+STARTUP ERROR: Missing Required Environment Variables
+{'=' * 70}
+
+The following environment variables are required but not set:
+
+{chr(10).join(f'  ❌ {var}' for var in missing_vars)}
+
+Please set these variables in:
+  - Railway: Project Settings → Variables
+  - Local: backend/.env file
+
+{'=' * 70}
+"""
+    logger.error(error_msg)
+    raise ValueError(f"Missing required environment variables: {missing_vars}")
+
+logger.info("✅ All required environment variables are set")
+# ============================================================================
+
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 

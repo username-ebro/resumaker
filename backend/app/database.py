@@ -10,10 +10,23 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Detect environment
+IS_PRODUCTION = os.getenv("RAILWAY_ENVIRONMENT_NAME") is not None
+
 # Validate required environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")  # For auth
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SECRET_KEY")  # For database
+
+# Use connection pooler in production (Railway) to prevent connection exhaustion
+# Pooler uses port 6543 with pgbouncer for connection pooling
+if IS_PRODUCTION:
+    SUPABASE_POOLER_URL = os.getenv("SUPABASE_POOLER_URL")
+    if SUPABASE_POOLER_URL:
+        logger.info("Using Supabase connection pooler for production")
+        SUPABASE_URL = SUPABASE_POOLER_URL
+    else:
+        logger.warning("SUPABASE_POOLER_URL not set, using direct connection (may hit limits)")
 
 required_vars = {
     "SUPABASE_URL": SUPABASE_URL,

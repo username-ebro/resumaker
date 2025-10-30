@@ -203,3 +203,88 @@ docker-compose.override.yml
 # KEEP EXAMPLES
 # ==========================================
 !.env.example
+
+# ==========================================
+# SECURITY - NEVER COMMIT THESE FILES
+# ==========================================
+# Add this section to your .gitignore file
+# to prevent accidental API key exposure
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+.envrc
+
+# API Keys & Credentials
+*_credentials.json
+*_key.json
+*-service-account.json
+service-account*.json
+credentials/
+secrets/
+*.pem
+*.key
+*.p12
+*.pkcs12
+
+# Google Apps Script OAuth
+.clasprc.json
+# .clasp.json  # Uncomment if it contains sensitive project IDs
+
+# AWS
+.aws/
+aws-credentials.json
+
+# Azure
+.azure/
+
+# GCP
+gcloud/
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+*.ppk
+authorized_keys
+
+# Database dumps (may contain sensitive data)
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs (may contain tokens or sensitive data)
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# IDE settings that may contain tokens
+.vscode/settings.json
+.idea/workspace.xml
+.idea/tasks.xml
+
+# Backup files
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Security scanning results
+.secrets.baseline
+gitleaks-report.json
+trufflehog-report.json
+
+# Backend environment files
+backend/.env
+backend/.env.local
