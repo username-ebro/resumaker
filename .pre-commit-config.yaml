@@ -1,0 +1,71 @@
+# .pre-commit-config.yaml
+# API Key & Secret Detection for Git Commits
+#
+# Installation:
+#   pip install pre-commit detect-secrets
+#   pre-commit install
+#
+# Generate baseline (run once):
+#   detect-secrets scan > .secrets.baseline
+#
+# Update hooks:
+#   pre-commit autoupdate
+
+repos:
+  # Primary secrets detection (Yelp detect-secrets)
+  # Low false positives, baseline system for whitelisting
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package-lock.json|yarn.lock|.secrets.baseline
+
+  # Secondary secrets detection (Gitleaks)
+  # 88% detection accuracy, fast scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+
+  # Custom secret patterns (Anthropic, OpenAI, etc.)
+  - repo: local
+    hooks:
+      - id: check-anthropic-keys
+        name: Check for Anthropic API keys
+        entry: bash -c 'if git diff --cached --name-only | grep -v ".pre-commit-config.yaml" | xargs -I {} sh -c "test -f \"{}\" && grep -Hn \"sk-ant-api03-\" \"{}\"" 2>/dev/null | grep .; then echo "❌ Anthropic API key detected in staged files!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+      - id: check-openai-keys
+        name: Check for OpenAI API keys
+        entry: bash -c 'if git diff --cached --name-only | xargs -I {} sh -c "test -f \"{}\" && grep -Hn \"sk-[a-zA-Z0-9]\{48\}\" \"{}\"" 2>/dev/null | grep -v ".pre-commit-config.yaml" | grep .; then echo "❌ OpenAI API key detected in staged files!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+  # Additional security checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent large files (credentials often in large files)
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+      # Prevent merge conflicts
+      - id: check-merge-conflict
+
+      # Prevent committing to main/master directly
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'master']
+
+      # Basic file hygiene
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      # JSON/YAML validation (catch malformed config files)
+      - id: check-json
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom tags
+
+      # Prevent accidentally added private keys
+      - id: detect-private-key
