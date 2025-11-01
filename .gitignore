@@ -200,6 +200,18 @@ docker-compose.override.yml
 # - PRE_BUILD_REVIEW.md
 
 # ==========================================
+# SESSION/HANDOFF FILES - OFTEN CONTAIN API KEYS!
+# ==========================================
+# These files frequently contain environment variables and API keys
+# from the development session. NEVER commit them.
+HANDOFF_*.md
+SESSION_*.md
+SESSION_HANDOFF*.md
+*_HANDOFF_*.md
+ANALYSIS_*.md
+DEPLOYMENT_*.md
+
+# ==========================================
 # KEEP EXAMPLES
 # ==========================================
 !.env.example
