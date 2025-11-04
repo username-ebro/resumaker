@@ -109,7 +109,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Trusted Host Middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["resumaker.up.railway.app", "localhost", "127.0.0.1"]
+    allowed_hosts=["resumaker-backend-production.up.railway.app", "localhost", "127.0.0.1"]
 )
 
 # GZip Compression Middleware
