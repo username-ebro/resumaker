@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 import ResumeEditor from '@/components/ResumeEditor'
 import TruthCheckReview from '@/components/TruthCheckReview'
+import ATSDownloadModal from '@/components/ATSDownloadModal'
 import { API_URL } from '@/lib/config'
 import DOMPurify from 'dompurify'
 import { useToast } from '@/components/Toast'
@@ -37,6 +38,8 @@ export default function ResumeDetailPage() {
   const [resume, setResume] = useState<Resume | null>(null)
   const [flags, setFlags] = useState<Flag[]>([])
   const [loading, setLoading] = useState(true)
+  const [showATSModal, setShowATSModal] = useState(false)
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'docx'>('pdf')
 
   useEffect(() => {
     checkUserAndFetchResume()
@@ -219,6 +222,19 @@ export default function ResumeDetailPage() {
     }
   }
 
+  const handleDownloadClick = (format: 'pdf' | 'docx') => {
+    setDownloadFormat(format)
+    setShowATSModal(true)
+  }
+
+  const handleConfirmDownload = (format: 'pdf' | 'docx') => {
+    if (format === 'pdf') {
+      handleExportPDF()
+    } else {
+      handleExportDOCX()
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -292,13 +308,13 @@ export default function ResumeDetailPage() {
                 </button>
               )}
               <button
-                onClick={handleExportPDF}
+                onClick={() => handleDownloadClick('pdf')}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 📄 Download PDF
               </button>
               <button
-                onClick={handleExportDOCX}
+                onClick={() => handleDownloadClick('docx')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 📝 Download DOCX
@@ -372,6 +388,14 @@ export default function ResumeDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ATS Download Modal */}
+      <ATSDownloadModal
+        isOpen={showATSModal}
+        onClose={() => setShowATSModal(false)}
+        onDownload={handleConfirmDownload}
+        format={downloadFormat}
+      />
     </div>
   )
 }
